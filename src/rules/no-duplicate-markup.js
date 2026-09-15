@@ -13,32 +13,52 @@ const MIN_CHARS = 250;
 const MAX_GROUPS = 5;
 
 function templateLines(source) {
-  let out = source;
-  if (out.startsWith("---")) {
-    const nl = out.indexOf("\n");
-    const close = nl === -1 ? -1 : out.indexOf("\n---", nl + 1);
-    if (close !== -1) {
-      let end = close + 4;
-      while (end < out.length && out[end] !== "\n") end++;
-      out = out.slice(end);
-    }
-  }
-  out = out
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
-  // keep line numbers: map normalized line index -> original line number
+  // Line-based state machine (NOT content removal) so reported line numbers
+  // are exact: skip frontmatter, script/style bodies, and comments.
   const numbered = [];
-  const rawLines = out.split("\n");
-  // offset of template body within source for line mapping
-  const bodyOff = source.length - out.length;
-  const baseLine = source.slice(0, bodyOff).split("\n").length;
-  rawLines.forEach((raw, i) => {
-    const norm = raw.replace(/\s+/g, " ").trim();
-    if (!norm || norm === "{" || norm === "}" || norm === "(" || norm === ")") return;
-    numbered.push({ norm, line: baseLine + i });
-  });
+  const rawLines = source.split("\n");
+  let i = 0;
+  if (rawLines[0] === "---" || rawLines[0] === "\uFEFF---") {
+    i = 1;
+    while (i < rawLines.length && rawLines[i].trim() !== "---") i++;
+    i++;
+  }
+  let inBlock = null; // "script" | "style" | "html" | "jsx"
+  for (; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    if (inBlock === "script" || inBlock === "style") {
+      if (new RegExp(`</${inBlock}\\s*>`, "i").test(line)) inBlock = null;
+      continue;
+    }
+    if (inBlock === "html") {
+      if (line.includes("-->")) inBlock = null;
+      continue;
+    }
+    if (inBlock === "jsx") {
+      if (line.includes("*/}")) inBlock = null;
+      continue;
+    }
+    const scriptOpen = line.match(/<script\b[^>]*>/i);
+    const styleOpen = line.match(/<style\b[^>]*>/i);
+    const opensScript = scriptOpen && !/<\/script\s*>/i.test(line);
+    const opensStyle = styleOpen && !/<\/style\s*>/i.test(line);
+    if (opensScript || opensStyle) {
+      inBlock = opensScript ? "script" : "style";
+      continue;
+    }
+    if (line.includes("<!--") && !line.includes("-->")) {
+      inBlock = "html";
+      continue;
+    }
+    if (line.includes("{/*") && !line.includes("*/}")) {
+      inBlock = "jsx";
+      continue;
+    }
+    const norm = line.replace(/\s+/g, " ").trim();
+    if (!norm || norm === "{" || norm === "}" || norm === "(" || norm === ")") continue;
+    if (norm.startsWith("<!--") || norm.startsWith("{/*")) continue;
+    numbered.push({ norm, line: i + 1 });
+  }
   return numbered;
 }
 

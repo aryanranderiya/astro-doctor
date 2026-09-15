@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.0
+
+- Robustness release: `ignore-file` suppression, self-closing script pairing
+  fixes, statement-anchored bound detection, guard-tiered open redirects,
+  React 19 `use()` coverage, BOM-safe splitting, `ok` reflects errors,
+  unknown-subcommand guard, cross-call isolation tests, self-closing-aware
+  script extraction.
+- Tests: 68 passing.
+
+
 ## 0.14.0
 
 - Robustness overhaul: single-pass JS lexer (`stripCodeNoise` handles

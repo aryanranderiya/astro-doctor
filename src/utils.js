@@ -443,7 +443,16 @@ export function isSuppressed(source, line, ruleName) {  // Supports, on the diag
   //   {/* astro-doctor-ignore-next-line astro/no-x */}
   //   // astro-doctor-ignore-next-line astro/no-x
   //   ... astro-doctor-ignore-line astro/no-x ...
+  //   ... astro-doctor-ignore-file astro/no-x ... (anywhere in the file)
   // A bare `astro-doctor-ignore` without a rule name suppresses all rules.
+  if (/astro-doctor-ignore-file(?:\s|$)/.test(source)) {
+    const m = source.match(/astro-doctor-ignore-file\s*([a-z0-9/_*,.\s-]*)/i);
+    const list = (m?.[1] ?? "").trim();
+    if (!list) return true;
+    const names = list.split(/[\s,]+/).filter(Boolean);
+    if (names.includes("all") || names.includes("*")) return true;
+    if (names.includes(ruleName)) return true;
+  }
   const lines = source.split("\n");
   const targets = [];
   if (lines[line - 1] !== undefined) targets.push(lines[line - 1]);
@@ -492,6 +501,10 @@ export function eachBodyScript(source, fn) {
   const closeRe = /<\/script\s*>/gi;
   for (const t of tags) {
     if (t.name.toLowerCase() !== "script") continue;
+    // Self-closing <script … /> carries no body (common for ld+json
+    // set:html one-liners) — pairing it with a later </script> would swallow
+    // whole sections into a phantom block.
+    if (/\/>\s*$/.test(t.tag)) continue;
     closeRe.lastIndex = t.index + t.tag.length;
     const cm = closeRe.exec(body);
     if (!cm) continue;

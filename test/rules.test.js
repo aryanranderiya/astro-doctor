@@ -263,6 +263,12 @@ describe("breakage and hygiene", () => {
     assert.deepEqual(dead, ["src/components/Dead.tsx"]);
   });
 
+  it("ignore-file suppresses whole files with reasons", () => {
+    const src = `<!-- astro-doctor-ignore-file astro/no-unsafe-set-html -- trusted sprite -->\n<span set:html={x} />`;
+    const res = scanFiles(["a.astro"], { read: () => src });
+    assert.ok(!res.diagnostics.some((d) => d.rule === "astro/no-unsafe-set-html"));
+  });
+
   it("scoreFor discriminates instead of clamping", async () => {
     const { scoreFor } = await import("../src/engine.js");
     assert.equal(scoreFor([]), 100);

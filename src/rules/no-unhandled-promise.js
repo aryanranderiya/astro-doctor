@@ -11,8 +11,11 @@ export const meta = {
 export function check(file, source) {
   const { frontmatterEnd } = splitFrontmatter(source);
   const body = source.slice(frontmatterEnd);
+  // Self-closing <script … /> tags carry no body — blank them so the
+  // body matcher below cannot pair them with a later </script>.
+  const code = body.replace(/<script\b[^>]*\/\s*>/gi, (m) => " ".repeat(m.length));
   const diagnostics = [];
-  for (const m of body.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+  for (const m of code.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
     const js = m[2] || "";
     const jsOff = (m.index ?? 0) + m[0].indexOf(js);
     for (const t of js.matchAll(/\.then\s*\(/g)) {

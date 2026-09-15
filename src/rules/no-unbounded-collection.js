@@ -16,10 +16,19 @@ export function check(file, source) {
   for (const m of frontmatter.matchAll(/await\s+getCollection\s*\(\s*(['"`][^'"`]+['"`])(\s*,[^)]*)?\)/g)) {
     const idx = m.index ?? 0;
     const hasFilter = !!m[2];
-    // A bound looks like .slice(/.limit(/take(/first(/paginate( on the result
-    // chain within ~600 chars after the call.
-    const after = frontmatter.slice(idx, idx + 600);
-    const hasBound = /\.\s*(slice|limit|take|first|paginate|sliceAndDice)\s*\(/.test(after);
+    // A bound looks like .slice(/.limit(/take(/first(/paginate( applied to the
+    // fetched data, often through a derived variable
+    // (`allPosts` → `latestPosts = allPosts.sort(…).slice(0, 4)`). Anchor on
+    // the fetched name so unrelated slices can't misattribute.
+    const decl = frontmatter.slice(Math.max(0, idx - 120), idx + 5).match(/const\s+([A-Za-z_$][\w$]*)\s*=\s*\(?\s*await/);
+    let hasBound = false;
+    if (decl) {
+      const flow = new RegExp(
+        decl[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+          "\\b[\\s\\S]{0,1200}?\\.\\s*(slice|limit|take|first|paginate)\\s*\\("
+      );
+      hasBound = flow.test(frontmatter.slice(idx));
+    }
     if (hasFilter && hasBound) continue;
     const why = !hasFilter
       ? "no filter and no bound"

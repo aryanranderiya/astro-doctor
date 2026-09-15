@@ -11,9 +11,12 @@ export const meta = {
 export function check(file, source) {
   const { frontmatterEnd } = splitFrontmatter(source);
   const body = source.slice(frontmatterEnd);
+  // Self-closing <script … /> tags carry no body — blank them so the
+  // body matcher below cannot pair them with a later </script>.
+  const code = body.replace(/<script\b[^>]*\/\s*>/gi, (m) => " ".repeat(m.length));
   const diagnostics = [];
   // Per <script> block (opening tag may carry is:inline/src — inspect body).
-  for (const m of body.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+  for (const m of code.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
     const js = m[2] || "";
     if (!js.includes("DOMContentLoaded")) continue;
     if (/astro:(page-load|after-swap)/.test(js)) continue; // router-aware
