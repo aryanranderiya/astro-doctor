@@ -1,0 +1,53 @@
+{
+  "name": "astro-doctor",
+  "version": "0.14.0",
+  "description": "Deterministic static analysis for Astro — islands, data-fetching, SSR, security, and performance. No LLM, AST/regex only.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./engine": "./src/engine.js",
+    "./rules": "./src/rules/index.js"
+  },
+  "bin": {
+    "astro-doctor": "./bin/astro-doctor.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "docs/RULES.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "doctor": "node ./bin/astro-doctor.js",
+    "test": "node --test test/rules.test.js test/cli.test.js test/invariants.test.js",
+    "scan:self": "node ./bin/astro-doctor.js ."
+  },
+  "keywords": [
+    "astro",
+    "linter",
+    "static-analysis",
+    "islands",
+    "hydration",
+    "performance",
+    "security",
+    "ssr",
+    "content-collections",
+    "a11y"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aryanranderiya/astro-doctor.git"
+  },
+  "homepage": "https://github.com/aryanranderiya/astro-doctor#readme",
+  "bugs": {
+    "url": "https://github.com/aryanranderiya/astro-doctor/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
