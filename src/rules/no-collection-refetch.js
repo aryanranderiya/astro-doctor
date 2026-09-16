@@ -1,4 +1,5 @@
 import { lineOf, snippetOf, splitFrontmatter, stripCodeNoise } from "../utils.js";
+import { getStaticPathsSpan } from "../parse.js";
 
 export const meta = {
   name: "astro/no-collection-refetch",
@@ -11,29 +12,13 @@ export const meta = {
 export function check(file, source) {
   const { frontmatter } = splitFrontmatter(source);
   if (!frontmatter) return [];
-  const pathsFn = frontmatter.match(/export\s+(async\s+)?function\s+getStaticPaths\s*\(/);
-  if (!pathsFn || pathsFn.index === undefined) return [];
-  // Find the end of the getStaticPaths function via brace balance.
   const code = stripCodeNoise(frontmatter);
-  const openIdx = code.indexOf("{", pathsFn.index);
-  if (openIdx === -1) return [];
-  let depth = 0;
-  let fnEnd = -1;
-  for (let i = openIdx; i < code.length; i++) {
-    if (code[i] === "{") depth++;
-    else if (code[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        fnEnd = i;
-        break;
-      }
-    }
-  }
-  if (fnEnd === -1) return [];
-  const after = code.slice(fnEnd);
+  const span = getStaticPathsSpan(code);
+  if (!span) return [];
+  const after = code.slice(span.end);
   const m = after.match(/await\s+(getCollection|getEntry)\s*\(/);
   if (!m || m.index === undefined) return [];
-  const idx = fnEnd + m.index;
+  const idx = span.end + m.index;
   return [
     {
       rule: meta.name,

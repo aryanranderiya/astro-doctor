@@ -246,6 +246,66 @@ export function parseDocumentSync(source, file = "<input>") {
   }
 }
 
+// Span of getStaticPaths() in frontmatter code ({ start, end } indices into
+// `code`), supporting both `export [async] function getStaticPaths()` and
+// `export const getStaticPaths = [async] (...) => …` forms. Null when absent.
+export function getStaticPathsSpan(code) {
+  const decl = /export\s+(?:(async)\s+)?function\s+getStaticPaths\s*\(/.exec(code);
+  const arrow = /export\s+const\s+getStaticPaths\s*=\s*(async\s*)?\([^)]*\)\s*=>/.exec(code);
+  const m = decl && arrow ? (decl.index < arrow.index ? decl : arrow) : decl ?? arrow;
+  if (!m) return null;
+  const isArrow = m === arrow;
+  let i;
+  if (isArrow) {
+    i = m.index + m[0].length;
+  } else {
+    // advance past the parameter list (defaults may nest parens)
+    i = m.index + m[0].length - 1; // at the opening (
+    let pdepth = 0;
+    for (; i < code.length; i++) {
+      if (code[i] === "(") pdepth++;
+      else if (code[i] === ")") {
+        pdepth--;
+        if (pdepth === 0) {
+          i++;
+          break;
+        }
+      }
+    }
+  }
+  // skip whitespace to the body
+  const stripped = code;
+  while (i < stripped.length && /\s/.test(stripped[i])) i++;
+  if (stripped[i] !== "{") {
+    if (!isArrow) return null;
+    // concise arrow body: runs to the statement end
+    let depth = 0;
+    let q = null;
+    for (let j = i; j < stripped.length; j++) {
+      const c = stripped[j];
+      if (q) {
+        if (c === "\\") j++;
+        else if (c === q) q = null;
+        continue;
+      }
+      if (c === '"' || c === "'" || c === "`") q = c;
+      else if (c === "(" || c === "[") depth++;
+      else if (c === ")" || c === "]") depth--;
+      else if ((c === ";" || c === "\n") && depth <= 0) return { start: m.index, end: j };
+    }
+    return { start: m.index, end: stripped.length };
+  }
+  let depth = 0;
+  for (let j = i; j < stripped.length; j++) {
+    if (stripped[j] === "{") depth++;
+    else if (stripped[j] === "}") {
+      depth--;
+      if (depth === 0) return { start: m.index, end: j + 1 };
+    }
+  }
+  return null;
+}
+
 // Bounded cache: tests and repeated scans reuse sources; capped FIFO.
 const cache = new Map();
 const CACHE_LIMIT = 500;

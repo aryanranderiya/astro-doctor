@@ -1,6 +1,6 @@
 {
   "name": "astro-doctor",
-  "version": "0.18.1",
+  "version": "0.19.0",
   "description": "Deterministic static analysis for Astro — islands, data-fetching, SSR, security, and performance. No LLM, AST/regex only.",
   "type": "module",
   "exports": {
@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "doctor": "node ./bin/astro-doctor.js",
-    "test": "node --test test/rules.test.js test/cli.test.js test/invariants.test.js test/properties.test.js",
+    "test": "node --test test/rules.test.js test/cli.test.js test/invariants.test.js test/properties.test.js test/parse.test.js",
     "scan:self": "node ./bin/astro-doctor.js ."
   },
   "keywords": [

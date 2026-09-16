@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { scanDir, RULES, topRules, byCategory } from "../src/engine.js";
 import { loadConfig } from "../src/config.js";
 
-const VERSION = "0.18.1";
+const VERSION = "0.19.0";
 const args = process.argv.slice(2);
 
 function help() {
@@ -13,6 +13,7 @@ function help() {
     ``,
     `Usage:`,
     `  astro-doctor [dir] [--json] [--verbose] [--quiet] [--config <file>]`,
+    `  astro-doctor [dir] [--fast] [--cache]`,
     `  astro-doctor rules [--json]`,
     `  astro-doctor ci install [--dir <project>] [--yes]`,
     ``,
@@ -21,6 +22,8 @@ function help() {
     `  --verbose   print rule list + config file used`,
     `  --quiet     print only the score line (human mode)`,
     `  --config    path to astro-doctor.config.mjs (default: auto-discover)`,
+    `  --fast      per-file rules only (skip project-wide reference scans)`,
+    `  --cache     persist per-file findings in .astro-doctor-cache.json`,
     `  rules       list all rules with severity + description`,
     ``,
     `Suppression (no allowlists — be explicit):`,
@@ -146,7 +149,11 @@ if (cfgIdx !== -1 && args[cfgIdx + 1]) {
   }
 }
 
-const { filesScanned, diagnostics, score, grade } = scanDir(target, { config });
+const { filesScanned, diagnostics, score, grade } = scanDir(target, {
+  config,
+  fast: args.includes("--fast"),
+  cache: args.includes("--cache"),
+});
 const errors = diagnostics.filter((d) => d.severity === "error").length;
 const warnings = diagnostics.length - errors;
 

@@ -88,7 +88,10 @@ export function check(file, source) {
   const headRange = span ? [span[0] + frontmatterEnd, span[1] + frontmatterEnd] : null;
   const inHead = (off) => headRange !== null && off >= headRange[0] && off < headRange[1];
   eachBodyScript(source, (block) => {
-    if (inHead(block.tagStart)) return;
+    const headBlock = inHead(block.tagStart);
+    // Head scripts are carried over when identical; only page-varying ones
+    // (referencing Astro.* data) are genuinely new each navigation.
+    if (headBlock && !/\bAstro\./.test(block.js)) return;
     const { attrs, js } = block;
     // docs.astro.build (View Transitions + Scripts): default bundled module
     // scripts run ONCE ever; only is:inline / data-astro-rerun scripts

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.0
+
+- Document IR: compiler-backed structure (`src/parse.js`) with scanner
+  fallback; 14 tag rules migrated; expression ancestry kills the island-in-map
+  heuristic; subtree fallback checks replace file-level guesses.
+- Killed limitations: arrow-form `getStaticPaths`, single-arg `navigate()`
+  taint tracking, page-varying head scripts.
+- Persistent `--cache` (mtime+size, versioned, config-aware; self-excluding
+  from the corpus) and `--fast` (per-file rules only).
+- Tests: 85 passing, incl. agreement, metamorphic, cache, and version suites.
+
+
 ## 0.18.1
 
 - Compiler/scanner agreement suite plus metamorphic properties (inert appends

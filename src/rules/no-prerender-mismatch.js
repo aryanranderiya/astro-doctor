@@ -1,4 +1,5 @@
-import { lineOf, snippetOf, splitFrontmatter } from "../utils.js";
+import { lineOf, snippetOf, splitFrontmatter, stripCodeNoise } from "../utils.js";
+import { getStaticPathsSpan } from "../parse.js";
 
 export const meta = {
   name: "astro/no-prerender-mismatch",
@@ -12,7 +13,7 @@ export function check(file, source) {
   const { frontmatter } = splitFrontmatter(source);
   if (!frontmatter) return [];
   const hasOptOut = /export\s+const\s+prerender\s*=\s*false/.test(frontmatter);
-  const hasPaths = /export\s+(async\s+)?function\s+getStaticPaths\s*\(/.test(frontmatter);
+  const hasPaths = getStaticPathsSpan(stripCodeNoise(frontmatter)) !== null;
   if (!(hasOptOut && hasPaths)) return [];
   const idx = source.indexOf("getStaticPaths");
   return [

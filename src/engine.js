@@ -42,6 +42,9 @@ export function collectCorpusFiles(root) {
     }
     for (const e of entries) {
       if (CORPUS_IGNORE.has(e.name)) continue;
+      // The tool's own cache records file paths — letting it vote in the
+      // reference graph would resurrect every dead component on rescan.
+      if (e.name === CACHE_FILENAME) continue;
       const full = path.join(dir, e.name);
       if (e.isDirectory()) walk(full);
       else if (e.isFile() && CORPUS_EXTS.has(path.extname(e.name))) out.push(full);
@@ -71,9 +74,13 @@ export function gradeFor(score) {
   return "F";
 }
 
-export function scanFiles(files, { config = {}, read = (f) => fs.readFileSync(f, "utf8"), corpus = new Map() } = {}) {
+export const TOOL_VERSION = "0.19.0";
+export const CACHE_FILENAME = ".astro-doctor-cache.json";
+
+export function scanFiles(files, { config = {}, read = (f) => fs.readFileSync(f, "utf8"), corpus = new Map(), fast = false, cacheMap = null, stat = null } = {}) {
   const diagnostics = [];
   const sources = new Map();
+  const cfgHash = TOOL_VERSION + ":" + JSON.stringify({ rules: config.rules ?? {}, ignore: config.ignore ?? [] });
   for (const file of files) {
     if (isIgnored(config, file, config.__root ?? process.cwd())) continue;
     let source = "";
@@ -83,6 +90,25 @@ export function scanFiles(files, { config = {}, read = (f) => fs.readFileSync(f,
       continue;
     }
     sources.set(file, source);
+    // Persistent per-file cache (--cache): content-addressed by mtime+size,
+    // namespaced by tool version and effective config.
+    if (cacheMap && stat) {
+      try {
+        const st = stat(file);
+        const entry = cacheMap.get(file);
+        if (
+          entry &&
+          entry.sig === `${st.mtimeMs}:${st.size}` &&
+          entry.cfg === cfgHash
+        ) {
+          diagnostics.push(...entry.diagnostics);
+          continue;
+        }
+      } catch {
+        // fall through to a fresh scan
+      }
+    }
+    const before = diagnostics.length;
     for (const rule of RULES) {
       if (typeof rule.check !== "function") continue; // checkAll-only rules run below
       const defSeverity = rule.meta?.severity ?? "warning";
@@ -107,6 +133,18 @@ export function scanFiles(files, { config = {}, read = (f) => fs.readFileSync(f,
         const severity = sev !== defSeverity ? sev : (d.severity ?? defSeverity);
         if (isSuppressed(source, d.line, d.rule)) continue;
         diagnostics.push({ ...d, severity });
+      }
+    }
+    if (cacheMap && stat) {
+      try {
+        const st = stat(file);
+        cacheMap.set(file, {
+          sig: `${st.mtimeMs}:${st.size}`,
+          cfg: cfgHash,
+          diagnostics: diagnostics.slice(before),
+        });
+      } catch {
+        // cache write failures must never fail the scan
       }
     }
   }
@@ -134,7 +172,8 @@ export function scanFiles(files, { config = {}, read = (f) => fs.readFileSync(f,
     },
   };
   const corpusFiles = [...new Set([...sources.keys(), ...corpus.keys()])];
-  for (const rule of RULES) {
+  // --fast: per-file rules only (skips project-wide reference/duplicate scans).
+  if (!fast) for (const rule of RULES) {
     if (typeof rule.checkAll !== "function") continue;
     const defSeverity = rule.meta?.severity ?? "warning";
     const sev = resolveSeverity(config, rule.meta?.name, defSeverity);
@@ -173,7 +212,7 @@ export function scanDir(root, opts = {}) {
   const config = { ...(opts.config ?? {}), __root: root };
   // Corpus for cross-file rules: read siblings once (importers, content).
   const corpus = new Map();
-  if (RULES.some((r) => typeof r.checkAll === "function")) {
+  if (!opts.fast && RULES.some((r) => typeof r.checkAll === "function")) {
     for (const f of collectCorpusFiles(root)) {
       if (corpus.has(f)) continue;
       try {
@@ -183,7 +222,40 @@ export function scanDir(root, opts = {}) {
       }
     }
   }
-  return scanFiles(files, { ...opts, config, corpus });
+  // Opt-in persistent cache: per-file findings keyed by mtime+size, tool
+  // version, and effective config. Cross-file rules always run fresh.
+  let cacheMap = null;
+  let cachePath = null;
+  if (opts.cache) {
+    cachePath = path.join(root, CACHE_FILENAME);
+    try {
+      const raw = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+      if (raw && raw.tool === TOOL_VERSION && typeof raw.files === "object") {
+        cacheMap = new Map(Object.entries(raw.files));
+      }
+    } catch {
+      cacheMap = new Map();
+    }
+    if (!cacheMap) cacheMap = new Map();
+  }
+  const result = scanFiles(files, {
+    ...opts,
+    config,
+    corpus,
+    cacheMap,
+    stat: opts.cache ? (f) => fs.statSync(f) : null,
+  });
+  if (opts.cache && cachePath && cacheMap) {
+    try {
+      fs.writeFileSync(
+        cachePath,
+        JSON.stringify({ tool: TOOL_VERSION, files: Object.fromEntries(cacheMap) })
+      );
+    } catch {
+      // cache write failures must never fail the scan
+    }
+  }
+  return result;
 }
 
 export function topRules(diagnostics, n = 3) {
