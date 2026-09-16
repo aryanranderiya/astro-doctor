@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.1
+
+- Compiler/scanner agreement suite plus metamorphic properties (inert appends
+  never remove findings; added files never remove checkAll findings).
+- Tests: 78 passing.
+
+
 ## 0.18.0
 
 - Compiler-backed structure: 14 tag-consuming rules migrated to the
