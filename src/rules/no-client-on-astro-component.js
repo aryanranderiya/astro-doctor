@@ -1,4 +1,5 @@
-import { lineOf, snippetOf, maskTemplate, splitFrontmatter, scanTags, matchDirectives } from "../utils.js";
+import { lineOf, snippetOf, splitFrontmatter } from "../utils.js";
+import { getDoc } from "../parse.js";
 
 export const meta = {
   name: "astro/no-client-on-astro-component",
@@ -28,21 +29,22 @@ export function check(file, source) {
     }
   }
   if (astroNames.size === 0) return [];
-  const clean = maskTemplate(source);
+  const doc = getDoc(source, file);
   const diagnostics = [];
-  for (const { name, tag, index } of scanTags(clean)) {
-    const base = name.split(".")[0];
+  for (const tag of doc.tags) {
+    if (tag.kind !== "component") continue;
+    const base = tag.name.split(".")[0];
     if (!astroNames.has(base)) continue;
-    const dir = matchDirectives(tag).find((d) => d.startsWith("client:"));
+    const dir = tag.attrs.find((a) => a.name.startsWith("client:"));
     if (!dir) continue;
     diagnostics.push({
       rule: meta.name,
       category: meta.category,
       severity: meta.severity,
       file,
-      line: lineOf(source, index),
-      message: `<${name} ${dir}> targets a .astro component — .astro has no client runtime, so this fails to build. Extract the interactive part into a framework island (.tsx) or drive it with a client <script>.`,
-      snippet: snippetOf(source, index),
+      line: tag.line,
+      message: `<${tag.name} ${dir.name}> targets a .astro component — .astro has no client runtime, so this fails to build. Extract the interactive part into a framework island (.tsx) or drive it with a client <script>.`,
+      snippet: snippetOf(source, tag.index),
     });
     if (diagnostics.length >= 5) break;
   }

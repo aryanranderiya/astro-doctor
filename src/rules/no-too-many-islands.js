@@ -1,4 +1,5 @@
-import { lineOf, snippetOf, maskTemplate, scanTags, matchDirectives } from "../utils.js";
+import { lineOf, snippetOf } from "../utils.js";
+import { getDoc } from "../parse.js";
 
 export const meta = {
   name: "astro/no-too-many-islands",
@@ -9,11 +10,8 @@ export const meta = {
 };
 
 export function check(file, source) {
-  const clean = maskTemplate(source);
-  const found = [];
-  for (const { tag, index } of scanTags(clean)) {
-    if (matchDirectives(tag).some((d) => d.startsWith("client:"))) found.push(index);
-  }
+  const doc = getDoc(source, file);
+  const found = doc.tags.filter((t) => t.attrs.some((a) => a.name.startsWith("client:")));
   if (found.length <= 4) return [];
   const severity = found.length > 7 ? "error" : meta.severity;
   const first = found[0];
@@ -23,9 +21,9 @@ export function check(file, source) {
       category: meta.category,
       severity,
       file,
-      line: lineOf(source, first),
+      line: first.line,
       message: `${found.length} hydrated islands in one file. Each island duplicates runtime cost — consolidate lists into a single island, drop static ones to plain .astro, or use client:media/rootMargin.`,
-      snippet: snippetOf(source, first),
+      snippet: snippetOf(source, first.index),
     },
   ];
 }

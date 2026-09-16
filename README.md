@@ -1,6 +1,6 @@
 # astro-doctor
 
-[![version](https://img.shields.io/badge/version-0.17.0-black?style=flat&color=000000&colorB=000000)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.18.0-black?style=flat&color=000000&colorB=000000)](./CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-65%20passing-black?style=flat&color=000000&colorB=000000)](./test/)
 [![rules](https://img.shields.io/badge/rules-42-black?style=flat&color=000000&colorB=000000)](./docs/RULES.md)
 [![node](https://img.shields.io/badge/node-%3E%3D18-black?style=flat&color=000000&colorB=000000)](./package.json)
@@ -105,9 +105,11 @@ export default {
 ## How it stays honest
 
 One shared tokenizer (`splitFrontmatter`, `maskTemplate`, single-pass JS lexer,
-`scanTags`, `eachBodyScript`) — rules never hand-roll parsing.
-Length-preservation and slice-alignment invariants are tested, plus a 200-mutant
-fuzz run over every rule and CLI exit-code/JSON-shape tests. See
+`scanTags`, `eachBodyScript`) plus the compiler-backed Document IR
+(`src/parse.js`: exact node kinds, attribute values, expression ancestry,
+subtree fallback — scanner fallback when parsing fails). Rules never hand-roll
+parsing. Length-preservation and slice-alignment invariants are tested, plus a
+200-mutant fuzz run over every rule and CLI exit-code/JSON-shape tests. See
 [`docs/RULES.md`](./docs/RULES.md) for deliberate non-rules.
 
 ## Programmatic API

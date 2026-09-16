@@ -361,7 +361,18 @@ describe("hydration payloads and duplication", () => {
   it("no-duplicate-markup finds repeated blocks across files", async () => {
     const { RULES } = await import("../src/rules/index.js");
     const rule = RULES.find((r) => r.meta.name === "astro/no-duplicate-markup");
-    const block = `<figure class="my-6">\n<simple-player\nsrc={src}\ncontrols={c}\nstyle="x: y"\nlinesix="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"\nlineseven="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"\n eight oito ocho eight eight eight 8\nnine nine nine nine nine nine nine 9\nten ten ten ten ten ten ten ten 10</simple-player>\n{caption && <figcaption>{caption}</figcaption>}\n</figure>`;
+    const block = `<figure class="my-6 extra-padding-class-here">
+<simple-player data-test-id="player-one-here-ok"
+src={src}
+controls={controls || undefined}
+style="--simple-player-aspect-ratio: 16 / 9 ratio here"
+linesix="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+lineseven="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+ eight oito ocho eight eight eight eight eight eight 8
+nine nine nine nine nine nine nine nine nine nine 9
+ten ten ten ten ten ten ten ten ten ten ten 10</simple-player>
+{caption && <figcaption class="caption-class-here">{caption}</figcaption>}
+</figure>`;
     const files = ["/r/a.astro", "/r/b.astro", "/r/c.astro"];
     const contents = {
       "/r/a.astro": `---\nconst x = 1;\n---\n<div>unique-a</div>\n${block}`,
@@ -371,6 +382,8 @@ describe("hydration payloads and duplication", () => {
     const found = rule.checkAll(files, (f) => contents[f]);
     assert.equal(found.length, 1);
     assert.match(found[0].message, /b\.astro/);
+    assert.equal(found[0].line, 5);
+    assert.equal(found[0].file, "/r/a.astro");
   });
 
   it("no-unsafe-navigate flags tainted targets, allows allowlists", () => {    // NOTE: single-arg dataflow (const to = …; navigate(to)) needs real

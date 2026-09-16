@@ -1,4 +1,5 @@
-import { lineOf, snippetOf, maskTemplate, splitFrontmatter, stripCodeNoise, scanTags, matchDirectives } from "../utils.js";
+import { lineOf, snippetOf, splitFrontmatter, stripCodeNoise } from "../utils.js";
+import { getDoc } from "../parse.js";
 
 export const meta = {
   name: "astro/no-large-island-props",
@@ -20,38 +21,43 @@ export function check(file, source) {
     rawNames.add(m[1]);
   }
   if (rawNames.size === 0) return [];
-  const clean = maskTemplate(source);
+  const doc = getDoc(source, file);
   const diagnostics = [];
-  for (const { name, tag, index: idx } of scanTags(clean)) {
-    if (!/^[A-Z]/.test(name)) continue;
-    if (!matchDirectives(tag).some((d) => d.startsWith("client:"))) continue;
+  for (const tag of doc.tags) {
+    if (tag.kind !== "component") continue;
+    if (!tag.attrs.some((a) => a.name.startsWith("client:"))) continue;
+    const idx = tag.index;
+    const name = tag.name;
     // 1. Spread of a whole entry: <X client:* {...entry} {...post} />
-    if (/\{\s*\.\.\.\s*(entry|post|project|convo|item|entry\.data)\s*\}/.test(tag)) {
+    const spreadAttr = tag.attrs.find((a) => a.kind === "spread");
+    const spread = spreadAttr
+      ? (spreadAttr.value || spreadAttr.name).replace(/^\.\.\./, "")
+      : null;
+    if (spread && /^(entry|post|project|convo|item|entry\.data)$/i.test(spread)) {
       diagnostics.push({
         rule: meta.name,
         category: meta.category,
         severity: "error",
         file,
-        line: lineOf(source, idx),
+        line: tag.line,
         message: `<${name}> spreads a whole collection entry into island props — including the Markdown body. Project to rendered fields first (slug/title/description/…).`,
         snippet: snippetOf(source, idx),
       });
       continue;
     }
-    // 2. Raw collection array passed wholesale: items={allPosts} / items={projectEntries}
-    for (const prop of tag.matchAll(/\b([A-Za-z_$][\w$]*)\s*=\s*\{\s*([A-Za-z_$][\w$]*)\s*\}/g)) {
-      if (rawNames.has(prop[2])) {
-        diagnostics.push({
-          rule: meta.name,
-          category: meta.category,
-          severity: meta.severity,
-          file,
-          line: lineOf(source, idx),
-          message: `<${name}> passes raw getCollection() result '${prop[2]}' (with bodies) as island props — serialized into the HTML. .map() to rendered fields first.`,
-          snippet: snippetOf(source, idx),
-        });
-        break;
-      }
+    // 2. Raw collection array passed wholesale: items={allPosts}
+    for (const attr of tag.attrs) {
+      if (attr.kind !== "expression" || !rawNames.has(attr.value.trim())) continue;
+      diagnostics.push({
+        rule: meta.name,
+        category: meta.category,
+        severity: meta.severity,
+        file,
+        line: tag.line,
+        message: `<${name}> passes raw getCollection() result '${attr.value.trim()}' (with bodies) as island props — serialized into the HTML. .map() to rendered fields first.`,
+        snippet: snippetOf(source, idx),
+      });
+      break;
     }
     if (diagnostics.length >= 5) break;
   }

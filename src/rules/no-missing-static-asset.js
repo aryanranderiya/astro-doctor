@@ -1,5 +1,6 @@
 import path from "node:path";
-import { lineOf, snippetOf, splitFrontmatter, maskTemplate, scanTags, tagAttr } from "../utils.js";
+import { lineOf, snippetOf, splitFrontmatter } from "../utils.js";
+import { getDoc } from "../parse.js";
 
 export const meta = {
   name: "astro/no-missing-static-asset",
@@ -20,71 +21,60 @@ function cleanRef(raw) {
   return pathname;
 }
 
-function* templateRefs(source, clean) {
-  for (const { name, tag, index } of scanTags(clean)) {
-    const lname = name.toLowerCase();
-    // value offset inside the tag (for exact line numbers on multiline tags)
+function* templateRefs(doc) {  for (const tag of doc.tags) {
+    const lname = tag.name.toLowerCase();
     const at = (attr) => {
-      const v = tagAttr(tag, attr);
-      if (typeof v !== "string") return null;
-      const ai = tag.search(new RegExp(`\\b${attr}\\s*=`));
-      const vi = ai === -1 ? -1 : tag.indexOf(v, ai);
-      return { raw: v, off: vi === -1 ? tag.indexOf(v) : vi };
+      const hit = tag.attrs.find((a) => a.name.toLowerCase() === attr);
+      return hit && typeof hit.value === "string" ? hit.value : null;
+    };
+    const emit = (raw) => {
+      if (raw === null || !raw.startsWith("/")) return null;
+      const ref = cleanRef(raw);
+      return ref ? { ref, index: tag.index } : null;
     };
     if (["img", "source", "video", "audio", "track", "embed"].includes(lname)) {
       for (const attr of ["src", "poster"]) {
-        const hit = at(attr);
-        if (!hit) continue;
-        const ref = cleanRef(hit.raw);
-        if (ref) yield { ref, index: index + hit.off };
+        const found = emit(at(attr));
+        if (found) yield found;
       }
       continue;
     }
     if (lname === "script") {
-      const hit = at("src");
-      if (hit) {
-        const ref = cleanRef(hit.raw);
-        if (ref) yield { ref, index: index + hit.off };
-      }
+      const found = emit(at("src"));
+      if (found) yield found;
       continue;
     }
     if (lname === "link") {
-      const hit = at("href");
-      if (hit) {
-        const ref = cleanRef(hit.raw);
-        if (ref) yield { ref, index: index + hit.off };
-      }
+      const found = emit(at("href"));
+      if (found) yield found;
       continue;
     }
     if (lname === "meta") {
-      const key = at("property")?.raw ?? at("name")?.raw ?? "";
+      const key = at("property") ?? at("name") ?? "";
       if (key === "og:image" || key === "twitter:image") {
-        const hit = at("content");
-        if (hit) {
-          const ref = cleanRef(hit.raw);
-          if (ref) yield { ref, index: index + hit.off };
-        }
+        const found = emit(at("content"));
+        if (found) yield found;
       }
       continue;
     }
   }
   // Image-ish props on ANY other tag (island/component props like logoSrc,
   // backgroundSrc, poster). Route hrefs on <a> are deliberately excluded,
-  // as are the media tags handled above.
-  const propRe = /\b\w*(?:src|Src|image|Image|icon|Icon|logo|Logo|cover|Cover|poster|Poster|thumb|Thumb)\w*\s*=\s*(["'])(\/[^"']+)\1/gi;
-  let pm;
-  while ((pm = propRe.exec(clean)) !== null) {
-    const ref = cleanRef(pm[3]);
-    if (ref) yield { ref, index: pm.index + pm[0].indexOf(pm[3]) };
+  // as are the media tags handled above. Only static quoted values count —
+  // dynamic expressions cannot be resolved.
+  for (const tag of doc.tags) {
+    const lname = tag.name.toLowerCase();
+    if (["img", "source", "video", "audio", "track", "embed", "script", "link", "meta", "a"].includes(lname))
+      continue;
+    for (const attr of tag.attrs) {
+      if (attr.kind !== "quoted") continue;
+      if (!/\w*(?:src|Src|image|Image|icon|Icon|logo|Logo|cover|Cover|poster|Poster|thumb|Thumb)\w*/.test(attr.name))
+        continue;
+      if (!attr.value.startsWith("/")) continue;
+      const ref = cleanRef(attr.value);
+      if (ref) yield { ref, index: tag.index };
+    }
   }
-}
-
-// Conventional doc files are never shipped — their example paths must not fire.
-const DOC_FILES = new Set(["README.md", "CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md"]);
-
-function isDraftMarkdown(source) {
-  const m = source.match(/^---\s*\n([\s\S]*?)\n---/);
-  return !!m && /^\s*draft\s*:\s*true\s*$/m.test(m[1]);
 }
 
 function* markdownRefs(source) {
@@ -135,6 +125,14 @@ function* frontmatterImageRefs(frontmatter) {
   }
 }
 
+// Conventional doc files are never shipped — their example paths must not fire.
+const DOC_FILES = new Set(["README.md", "CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md"]);
+
+function isDraftMarkdown(source) {
+  const m = source.match(/^---\s*\n([\s\S]*?)\n---/);
+  return !!m && /^\s*draft\s*:\s*true\s*$/m.test(m[1]);
+}
+
 export function checkAll(files, read, ctx = {}) {
   const root = ctx.root ?? process.cwd();
   const exists = ctx.exists ?? (() => true);
@@ -161,9 +159,8 @@ export function checkAll(files, read, ctx = {}) {
       refs = [...markdownRefs(source)];
     } else {
       const { frontmatter } = splitFrontmatter(source);
-      const clean = maskTemplate(source);
       refs = [
-        ...templateRefs(source, clean),
+        ...templateRefs(getDoc(source, file)),
         ...frontmatterImageRefs(frontmatter),
       ];
     }

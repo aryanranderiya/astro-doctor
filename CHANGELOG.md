@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.18.0
+
+- Compiler-backed structure: 14 tag-consuming rules migrated to the
+  `@astrojs/compiler` Document IR (exact node kinds, attribute values,
+  expression ancestry, subtree fallback); quote-aware scanner retained as
+  fallback with agreement coverage.
+- Fixed a 6KB false-negative hole (self-closing scripts swallowing content),
+  surfacing 4 previously-missed true findings.
+- Tests: 74 passing.
+
+
 ## 0.17.0
 
 - Hand-rolled parsing fully eliminated: asset refs, script blocks, head

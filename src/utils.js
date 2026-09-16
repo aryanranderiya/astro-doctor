@@ -369,12 +369,15 @@ export function maskTemplate(source) {
   // 2. Blank <script>…</script> and <style>…</style> wholesale (open tag, body,
   // close tag), located quote-aware via scanTags so `>` inside attributes
   // can't truncate the match. Bodies may contain anything (JSX-like text!).
+  // Self-closing opens (<script … />) carry no body and must not pair with
+  // a later close tag (that swallowed whole sections before).
   {
     const tags = scanTags(out);
     const spans = [];
     for (const t of tags) {
       const lname = t.name.toLowerCase();
       if (lname !== "script" && lname !== "style") continue;
+      if (/\/>\s*$/.test(t.tag)) continue;
       const cm = new RegExp(`</${t.name}\\s*>`, "i").exec(out.slice(t.index + t.tag.length));
       if (!cm) continue;
       spans.push([t.index, t.index + t.tag.length + cm.index + cm[0].length]);

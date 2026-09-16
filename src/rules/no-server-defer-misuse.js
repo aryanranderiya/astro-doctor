@@ -1,4 +1,5 @@
-import { lineOf, snippetOf, maskTemplate, scanTags, matchDirectives } from "../utils.js";
+import { lineOf, snippetOf, maskTemplate } from "../utils.js";
+import { getDoc } from "../parse.js";
 
 export const meta = {
   name: "astro/no-server-defer-misuse",
@@ -9,13 +10,14 @@ export const meta = {
 };
 
 export function check(file, source) {
+  const doc = getDoc(source, file);
   const clean = maskTemplate(source);
   if (!clean.includes("server:defer")) return [];
   const diagnostics = [];
-  const hasFallback =
+  const fileHasFallback =
     clean.includes('slot="fallback"') || clean.includes("slot='fallback'");
-  for (const { name, tag, index } of scanTags(clean)) {
-    const dirs = matchDirectives(tag);
+  for (const tag of doc.tags) {
+    const dirs = tag.attrs.map((a) => a.name).filter((n) => n.startsWith("server:") || n.startsWith("client:"));
     if (!dirs.includes("server:defer")) continue;
     if (dirs.some((d) => d.startsWith("client:"))) {
       diagnostics.push({
@@ -23,21 +25,22 @@ export function check(file, source) {
         category: meta.category,
         severity: "error",
         file,
-        line: lineOf(source, index),
-        message: `<${name}> mixes server:defer with a client:* directive — they are mutually exclusive (server island vs client hydration). Choose one.`,
-        snippet: snippetOf(source, index),
+        line: tag.line,
+        message: `<${tag.name}> mixes server:defer with a client:* directive — they are mutually exclusive (server island vs client hydration). Choose one.`,
+        snippet: snippetOf(source, tag.index),
       });
       continue;
     }
-    if (!hasFallback) {
+    const covered = doc.fallback ? fileHasFallback : tag.subtreeHasFallback;
+    if (!covered) {
       diagnostics.push({
         rule: meta.name,
         category: meta.category,
         severity: meta.severity,
         file,
-        line: lineOf(source, index),
-        message: `<${name} server:defer> has no slot="fallback" child — users see a blank hole until the island resolves. Add <div slot="fallback">skeleton</div>.`,
-        snippet: snippetOf(source, index),
+        line: tag.line,
+        message: `<${tag.name} server:defer> has no slot="fallback" child — users see a blank hole until the island resolves. Add <div slot="fallback">skeleton</div>.`,
+        snippet: snippetOf(source, tag.index),
       });
     }
     if (diagnostics.length >= 3) break;

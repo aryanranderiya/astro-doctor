@@ -1,4 +1,5 @@
-import { lineOf, snippetOf, maskTemplate, scanTags, matchDirectives } from "../utils.js";
+import { lineOf, snippetOf } from "../utils.js";
+import { getDoc } from "../parse.js";
 
 export const meta = {
   name: "astro/no-deep-island-props",
@@ -8,34 +9,6 @@ export const meta = {
     "Island props serialize into the HTML payload and deserialize on hydrate. Whole-props spreads, deeply nested inline literals, and prop-count bloat all ship bytes and slow hydration — pass flat, minimal data.",
 };
 
-function* propLiterals(tag) {
-  // Yield balanced {…} prop values in order.
-  const re = /[A-Za-z_$][\w$-]*\s*=\s*\{/g;
-  let m;
-  while ((m = re.exec(tag)) !== null) {
-    const open = m.index + m[0].length - 1;
-    let depth = 0;
-    let inS = null;
-    for (let i = open; i < tag.length; i++) {
-      const c = tag[i];
-      if (inS) {
-        if (c === "\\") i++;
-        else if (c === inS) inS = null;
-        continue;
-      }
-      if (c === '"' || c === "'" || c === "`") inS = c;
-      else if (c === "{") depth++;
-      else if (c === "}") {
-        depth--;
-        if (depth === 0) {
-          yield tag.slice(open, i + 1);
-          re.lastIndex = i + 1;
-          break;
-        }
-      }
-    }
-  }
-}
 function maxDepth(s) {
   let depth = 0;
   let max = 0;
@@ -57,42 +30,48 @@ function maxDepth(s) {
 }
 
 export function check(file, source) {
-  const clean = maskTemplate(source);
+  const doc = getDoc(source, file);
   const diagnostics = [];
-  for (const { name, tag, index: idx } of scanTags(clean)) {
-    if (!/^[A-Z]/.test(name)) continue;
-    if (!matchDirectives(tag).some((d) => d.startsWith("client:"))) continue;
+  for (const tag of doc.tags) {
+    if (tag.kind !== "component") continue;
+    if (!tag.attrs.some((a) => a.name.startsWith("client:"))) continue;
+    const idx = tag.index;
+    const name = tag.name;
     // 1. Whole-object spreads: {...Astro.props} serializes everything incl. children.
-    const spread = tag.match(/\{\s*\.\.\.\s*(Astro\.props|[A-Za-z_$][\w$]*)\s*\}/);
-    if (spread && (/^Astro\.props$/.test(spread[1]) || /entry|post$/i.test(spread[1]))) {
+    const spreadAttr = tag.attrs.find((a) => a.kind === "spread");
+    const spread = spreadAttr
+      ? (spreadAttr.value || spreadAttr.name).replace(/^\.\.\./, "")
+      : null;
+    if (spread && (/^Astro\.props$/.test(spread) || /entry|post$/i.test(spread))) {
       diagnostics.push({
         rule: meta.name,
         category: meta.category,
         severity: "error",
         file,
-        line: lineOf(source, idx),
-        message: `<${name}> spreads {...${spread[1]}} into island props — the whole object (children, bodies) serializes into HTML. Pass only the rendered fields.`,
+        line: tag.line,
+        message: `<${name}> spreads {...${spread}} into island props — the whole object (children, bodies) serializes into HTML. Pass only the rendered fields.`,
         snippet: snippetOf(source, idx),
       });
       continue;
     }
-    // 2. Deeply nested or huge inline literals (per-prop, balanced).
+    // 2. Deeply nested or huge inline literals.
     let deep = false;
-    for (const lit of propLiterals(tag)) {
-      if (lit.length > 300 || maxDepth(lit) >= 4) {
+    for (const attr of tag.attrs) {
+      if (attr.kind !== "expression") continue;
+      if (attr.value.length > 300 || maxDepth(attr.value) >= 3) {
         deep = true;
         break;
       }
     }
     // 3. Prop-count bloat (each prop serializes + reconciles).
-    const propCount = (tag.match(/[A-Za-z_$][\w$-]*\s*=/g) || []).length;
+    const propCount = tag.attrs.filter((a) => a.kind !== "spread").length;
     if (deep || propCount > 8) {
       diagnostics.push({
         rule: meta.name,
         category: meta.category,
         severity: meta.severity,
         file,
-        line: lineOf(source, idx),
+        line: tag.line,
         message: `<${name}> has ${deep ? "a deeply nested inline prop literal" : `${propCount} props`} — island props serialize into HTML and deserialize on hydrate. Flatten to minimal scalar/array data (ids, slugs, preformatted strings).`,
         snippet: snippetOf(source, idx),
       });

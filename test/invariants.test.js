@@ -165,4 +165,30 @@ describe("registry and config", () => {
     const snip = snippetOf("prefix\n" + line + "\n", 10, 120);
     assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(snip));
   });
+
+  it("self-closing scripts never swallow later content", async () => {
+    const { maskTemplate, eachBodyScript } = await import("../src/utils.js");
+    const src = '---\n---\n<script is:inline type="application/ld+json" set:html={x} />\n<div>\n<img src="/a.png" alt="a" width="2" height="2" loading="lazy">\n</div>\n<script>\ninit();\n</script>';
+    const masked = maskTemplate(src);
+    assert.ok(masked.includes("<img"), "img must survive masking");
+    const blocks = [];
+    eachBodyScript(src, (b) => blocks.push(b));
+    assert.equal(blocks.length, 1);
+    assert.ok(blocks[0].js.includes("init();"));
+  });
+
+  it("duplicate-markup reports exact template line numbers", async () => {
+    const { RULES } = await import("../src/rules/index.js");
+    const rule = RULES.find((r) => r.meta.name === "astro/no-duplicate-markup");
+    const block = `<figure class="my-6 extra-padding-class-here">\n<simple-player data-test-id="player-one-here-ok">\nsrc={src}\ncontrols={controls || undefined}\nstyle="--aspect-ratio: 16 / 9 ratio here ok"\nlinesix="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"\nlineseven="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"\n eight oito ocho eight eight eight eight eight eight 8\nnine nine nine nine nine nine nine nine nine nine 9\nten ten ten ten ten ten ten ten ten ten ten 10</simple-player>\n{caption && <figcaption class="caption-class-here">{caption}</figcaption>}\n</figure>`;
+    const a = `---\nconst x = 1;\n---\n<div>unique-a</div>\n${block}`;
+    const b = `---\n---\n<div>unique-b</div>\n${block}`;
+    const found = rule.checkAll(["/r/a.astro", "/r/b.astro"], (f) =>
+      f.endsWith("a.astro") ? a : b
+    );
+    assert.equal(found.length, 1);
+    // figure block starts at template line 5 (line 4 is the unique div)
+    assert.equal(found[0].line, 5);
+    assert.equal(found[0].file, "/r/a.astro");
+  });
 });

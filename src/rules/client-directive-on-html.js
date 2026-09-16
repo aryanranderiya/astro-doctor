@@ -1,4 +1,5 @@
-import { lineOf, snippetOf, isNativeTag, scanTags, matchDirectives, maskTemplate } from "../utils.js";
+import { lineOf, snippetOf } from "../utils.js";
+import { getDoc } from "../parse.js";
 
 export const meta = {
   name: "astro/no-client-directive-on-html",
@@ -9,21 +10,21 @@ export const meta = {
 };
 
 export function check(file, source) {
-  const clean = maskTemplate(source);
+  const doc = getDoc(source, file);
   const diagnostics = [];
-  for (const { name, tag, index } of scanTags(clean)) {
-    if (!isNativeTag(name)) continue;
-    const dirs = matchDirectives(tag).filter((d) => d.startsWith("client:"));
-    if (dirs.length === 0) continue;
-    const directive = dirs[0].split(":")[1];
+  for (const tag of doc.tags) {
+    // Compiler-classified elements and custom elements have no client runtime.
+    if (tag.kind !== "element" && tag.kind !== "custom-element") continue;
+    const dir = tag.attrs.find((a) => a.name.startsWith("client:"));
+    if (!dir) continue;
     diagnostics.push({
       rule: meta.name,
       category: meta.category,
       severity: meta.severity,
       file,
-      line: lineOf(source, index),
-      message: `<${name}> uses client:${directive} but client:* only works on framework island components (e.g. <MyReactComp client:${directive} />). It is ignored on native HTML — remove it or wrap in an island.`,
-      snippet: snippetOf(source, index),
+      line: tag.line,
+      message: `<${tag.name}> uses ${dir.name} but client:* only works on framework island components (e.g. <MyReactComp ${dir.name} />). It is ignored on native HTML — remove it or wrap in an island.`,
+      snippet: snippetOf(source, tag.index),
     });
   }
   return diagnostics;
