@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.0
+
+- Bulletproof pass: script-attr rules migrated to quote-aware extraction;
+  string-aware paren counting in island-in-map; config warns on unknown rule
+  names; surrogate-safe snippets; registry/meta/config unit tests; CRLF
+  fixtures; corpus re-validated (296 files, zero throws).
+- Tests: 72 passing.
+
+
 ## 0.15.0
 
 - Robustness release: `ignore-file` suppression, self-closing script pairing

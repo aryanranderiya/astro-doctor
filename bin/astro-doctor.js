@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { scanDir, RULES, topRules, byCategory } from "../src/engine.js";
 import { loadConfig } from "../src/config.js";
 
-const VERSION = "0.15.0";
+const VERSION = "0.16.0";
 const args = process.argv.slice(2);
 
 function help() {
@@ -130,6 +130,20 @@ if (cfgIdx !== -1 && args[cfgIdx + 1]) {
 } else {
   config = await loadConfig(target);
   configFile = config.__file ?? null;
+}
+
+// Fail-open would be silent: a typo'd rule name must not silently do nothing.
+{
+  const known = new Set(RULES.map((r) => r.meta.name));
+  const unknown = Object.keys(config.rules ?? {}).filter((k) => !known.has(k));
+  for (const k of unknown) {
+    const msg = `astro-doctor: unknown rule '${k}' in config (from ${configFile ?? "--config"}) — ignored. Run \`astro-doctor rules\` for valid names.`;
+    if (asJson) {
+      console.error(msg);
+    } else {
+      console.log(`  warning: ${msg}`);
+    }
+  }
 }
 
 const { filesScanned, diagnostics, score, grade } = scanDir(target, { config });

@@ -124,3 +124,45 @@ describe("fuzz-lite: no rule throws on hostile input", () => {
     }
   });
 });
+
+describe("registry and config", () => {
+  it("rule names are unique with complete meta", async () => {
+    const { RULES } = await import("../src/rules/index.js");
+    const names = RULES.map((r) => r.meta.name);
+    assert.equal(new Set(names).size, names.length, "duplicate rule names");
+    for (const r of RULES) {
+      assert.match(r.meta.name, /^astro\/[a-z0-9-]+$/);
+      assert.ok(["Correctness", "Performance", "Security", "Accessibility", "Maintainability", "Internal"].includes(r.meta.category), r.meta.name);
+      assert.ok(["error", "warning"].includes(r.meta.severity), r.meta.name);
+      assert.ok(r.meta.description.length > 20, r.meta.name);
+      assert.ok(typeof r.check === "function" || typeof r.checkAll === "function", r.meta.name);
+    }
+  });
+
+  it("resolveSeverity and isIgnored behave", async () => {
+    const { resolveSeverity, isIgnored } = await import("../src/config.js");
+    assert.equal(resolveSeverity({}, "astro/x", "warning"), "warning");
+    assert.equal(resolveSeverity({ rules: { "astro/x": "off" } }, "astro/x", "error"), "off");
+    assert.equal(resolveSeverity({ rules: { "astro/x": "error" } }, "astro/x", "warning"), "error");
+    assert.equal(resolveSeverity({ rules: { "astro/x": "bogus" } }, "astro/x", "warning"), "warning");
+    assert.equal(isIgnored({ ignore: ["src/skip/**"] }, "/r/src/skip/a.astro", "/r"), true);
+    assert.equal(isIgnored({ ignore: ["src/skip/**"] }, "/r/src/keep/a.astro", "/r"), false);
+    assert.equal(isIgnored({}, "/r/src/a.astro", "/r"), false);
+  });
+
+  it("CRLF sources keep line numbers", async () => {
+    const { maskTemplate, splitFrontmatter, lineOf } = await import("../src/utils.js");
+    const src = "---\r\nconst x = 1;\r\n---\r\n<div>\r\ntext\r\n</div>\r\n";
+    assert.equal(maskTemplate(src).length, src.length);
+    const { frontmatter, body } = splitFrontmatter(src);
+    assert.equal(frontmatter.length + body.length, src.length);
+    assert.equal(lineOf(src, src.indexOf("text")), 5);
+  });
+
+  it("snippets never split surrogate pairs", async () => {
+    const { snippetOf } = await import("../src/utils.js");
+    const line = "x".repeat(118) + "🎉" + "y".repeat(20);
+    const snip = snippetOf("prefix\n" + line + "\n", 10, 120);
+    assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(snip));
+  });
+});

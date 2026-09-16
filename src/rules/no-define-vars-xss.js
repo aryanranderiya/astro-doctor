@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, maskTemplate, splitFrontmatter } from "../utils.js";
+import { lineOf, snippetOf, maskTemplate, splitFrontmatter, eachBodyScript } from "../utils.js";
 
 export const meta = {
   name: "astro/no-define-vars-xss",
@@ -17,17 +17,17 @@ export function check(file, source) {
   const tainted = TAINT_RE.test(frontmatter) || TAINT_RE.test(source);
   if (!tainted) return [];
   const diagnostics = [];
-  for (const m of clean.matchAll(/<script\b[^>]*\bdefine:vars\b[^>]*>/gi)) {
+  eachBodyScript(source, ({ attrs, tagStart }) => {
+    if (!/\bdefine:vars\b/.test(attrs)) return;
     diagnostics.push({
       rule: meta.name,
       category: meta.category,
       severity: meta.severity,
       file,
-      line: lineOf(source, m.index ?? 0),
+      line: lineOf(source, tagStart),
       message: `<script define:vars> receives request-derived data (searchParams/cookies/params). The </script> escaping is bypassable — pass via <div data-x={...}> + dataset/textContent instead, or only pass static values.`,
-      snippet: snippetOf(source, m.index ?? 0),
+      snippet: snippetOf(source, tagStart),
     });
-    if (diagnostics.length >= 3) break;
-  }
-  return diagnostics;
+  });
+  return diagnostics.slice(0, 3);
 }

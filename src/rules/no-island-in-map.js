@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, maskTemplate, scanTags, matchDirectives } from "../utils.js";
+import { lineOf, snippetOf, maskTemplate, scanTags, matchDirectives, stripCodeNoise } from "../utils.js";
 
 export const meta = {
   name: "astro/no-island-in-map",
@@ -22,7 +22,7 @@ export function check(file, source) {
     const before = clean.slice(windowStart, idx);
     const mapPos = before.lastIndexOf(".map(");
     if (mapPos === -1) continue;
-    const after = before.slice(mapPos);
+    const after = stripCodeNoise(before.slice(mapPos));
     if (!after.includes("=>")) continue;
     let depth = 0;
     for (const ch of after) {

@@ -51,7 +51,10 @@ export function snippetOf(source, index, len = 120) {
   let lineEnd = source.indexOf("\n", Math.max(at, lineStart));
   if (lineEnd === -1) lineEnd = source.length;
   const line = source.slice(lineStart, lineEnd).trim();
-  return line.length > len ? line.slice(0, len - 1) + "…" : line;
+  // Truncate on code-point (not UTF-16) boundaries: splitting a surrogate
+  // pair emits lone surrogates that strict JSON parsers reject downstream.
+  const points = Array.from(line);
+  return points.length > len ? points.slice(0, len - 1).join("") + "…" : line;
 }
 
 export function isNativeTag(tag) {

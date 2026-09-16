@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, splitFrontmatter } from "../utils.js";
+import { lineOf, snippetOf, eachBodyScript } from "../utils.js";
 
 export const meta = {
   name: "astro/no-secret-in-define-vars",
@@ -19,13 +19,11 @@ function looksSecret(s) {
 }
 
 export function check(file, source) {
-  const { frontmatterEnd } = splitFrontmatter(source);
-  const body = source.slice(frontmatterEnd);
   const diagnostics = [];
-  for (const m of body.matchAll(/<script\b([^>]*)>/gi)) {
-    const attrs = m[1] || "";
+  eachBodyScript(source, ({ attrs, tagStart }) => {
+    if (diagnostics.length >= 3) return;
     const dv = attrs.match(/\bdefine:vars\s*=\s*\{\{([\s\S]*?)\}\}/);
-    if (!dv) continue;
+    if (!dv) return;
     const inner = dv[1];
     // entries look like `name` or `name: expr`
     for (const e of inner.matchAll(/([A-Za-z_$][\w$]*)(?:\s*:\s*([^,}]+))?/g)) {
@@ -33,7 +31,8 @@ export function check(file, source) {
       const val = (e[2] ?? key).trim();
       if (/^PUBLIC_/i.test(val)) continue;
       if (!looksSecret(key) && !looksSecret(val)) continue;
-      const idx = frontmatterEnd + (m.index ?? 0) + m[0].indexOf(e[0]);
+      // Report at the tag: entry offsets inside attrs are not source-stable.
+      const idx = tagStart;
       diagnostics.push({
         rule: meta.name,
         category: meta.category,
@@ -44,7 +43,6 @@ export function check(file, source) {
         snippet: snippetOf(source, idx),
       });
     }
-    if (diagnostics.length >= 3) break;
-  }
-  return diagnostics;
+  });
+  return diagnostics.slice(0, 3);
 }
