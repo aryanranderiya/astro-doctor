@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, splitFrontmatter } from "../utils.js";
+import { lineOf, snippetOf, eachBodyScript } from "../utils.js";
 
 export const meta = {
   name: "astro/no-unsafe-navigate",
@@ -13,15 +13,8 @@ const TAINT_RE = /\b(searchParams|location\.search|Astro\.params|params\.get|inp
 const GUARD_RE = /startsWith\s*\(\s*["']\/["']|allowlist|allowedPaths|includes\s*\(/;
 
 export function check(file, source) {
-  const { frontmatterEnd } = splitFrontmatter(source);
-  const body = source.slice(frontmatterEnd);
-  // Self-closing <script … /> tags carry no body — blank them so the
-  // body matcher below cannot pair them with a later </script>.
-  const code = body.replace(/<script\b[^>]*\/\s*>/gi, (m) => " ".repeat(m.length));
   const diagnostics = [];
-  for (const m of code.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
-    const js = m[2] || "";
-    const jsOff = frontmatterEnd + (m.index ?? 0) + m[0].indexOf(js);
+  eachBodyScript(source, ({ js, start: jsOff }) => {
     NAVIGATE_RE.lastIndex = 0;
     let n;
     while ((n = NAVIGATE_RE.exec(js)) !== null) {
@@ -39,9 +32,9 @@ export function check(file, source) {
         message: `navigate(${target.trim().slice(0, 40)}…) uses request/input data — navigate() does not sanitize (javascript: URLs execute). Allowlist paths or enforce same-origin before navigating.`,
         snippet: snippetOf(source, idx),
       });
-      if (diagnostics.length >= 3) break;
+      if (diagnostics.length >= 3) return;
     }
     NAVIGATE_RE.lastIndex = 0;
-  }
+  });
   return diagnostics;
 }

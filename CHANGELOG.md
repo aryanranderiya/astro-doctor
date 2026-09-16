@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0
+
+- Hand-rolled parsing fully eliminated: asset refs, script blocks, head
+  regions, and sync-script detection all run through `scanTags()` + `tagAttr()`
+  + `headSpan()`; dead regex table removed.
+- Tests: 72 passing.
+
+
 ## 0.16.0
 
 - Bulletproof pass: script-attr rules migrated to quote-aware extraction;

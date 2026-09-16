@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, splitFrontmatter } from "../utils.js";
+import { lineOf, snippetOf, eachBodyScript } from "../utils.js";
 
 export const meta = {
   name: "astro/no-unhandled-promise",
@@ -9,15 +9,8 @@ export const meta = {
 };
 
 export function check(file, source) {
-  const { frontmatterEnd } = splitFrontmatter(source);
-  const body = source.slice(frontmatterEnd);
-  // Self-closing <script … /> tags carry no body — blank them so the
-  // body matcher below cannot pair them with a later </script>.
-  const code = body.replace(/<script\b[^>]*\/\s*>/gi, (m) => " ".repeat(m.length));
   const diagnostics = [];
-  for (const m of code.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
-    const js = m[2] || "";
-    const jsOff = (m.index ?? 0) + m[0].indexOf(js);
+  eachBodyScript(source, ({ js, start: jsOff }) => {
     for (const t of js.matchAll(/\.then\s*\(/g)) {
       const tIdx = t.index ?? 0;
       // Balance parens from the .then( opener to find its argument list.
@@ -50,7 +43,7 @@ export function check(file, source) {
       if (/^\s*\.\s*catch\s*\(/.test(after)) continue;
       // `vt.finished.then(clear).catch(clear)`-style: catch later in chain
       if (/\.\s*catch\s*\(/.test(after.slice(0, 120))) continue;
-      const idx = frontmatterEnd + jsOff + tIdx;
+      const idx = jsOff + tIdx;
       diagnostics.push({
         rule: meta.name,
         category: meta.category,
@@ -60,8 +53,8 @@ export function check(file, source) {
         message: `.then() with no rejection handling — a failed dynamic import/fetch leaves dead UI and an unhandledrejection. Append .catch(fallback) (or pass a second callback).`,
         snippet: snippetOf(source, idx),
       });
-      if (diagnostics.length >= 4) return diagnostics;
+      if (diagnostics.length >= 4) return;
     }
-  }
+  });
   return diagnostics;
 }

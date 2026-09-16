@@ -1,6 +1,6 @@
 {
   "name": "astro-doctor",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "Deterministic static analysis for Astro — islands, data-fetching, SSR, security, and performance. No LLM, AST/regex only.",
   "type": "module",
   "exports": {

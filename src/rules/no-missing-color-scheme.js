@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, maskTemplate } from "../utils.js";
+import { lineOf, snippetOf, maskTemplate, headSpan } from "../utils.js";
 
 export const meta = {
   name: "astro/no-missing-color-scheme",
@@ -11,7 +11,8 @@ export const meta = {
 export function check(file, source) {
   const clean = maskTemplate(source);
   if (!/<html\b/i.test(clean)) return []; // document shells only
-  const head = (clean.match(/<head\b[^>]*>[\s\S]*?<\/head\s*>/i) ?? [])[0] ?? "";
+  const span = headSpan(clean);
+  const head = span ? clean.slice(span[0], span[1]) : "";
   const hasDarkSignal =
     /class\s*=\s*["'][^"']*\bdark\b/i.test(clean) ||
     /prefers-color-scheme/i.test(source) ||

@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, splitFrontmatter, stripCodeNoise, eachBodyScript, isRerunnableScript } from "../utils.js";
+import { lineOf, snippetOf, splitFrontmatter, stripCodeNoise, eachBodyScript, isRerunnableScript, headSpan } from "../utils.js";
 
 export const meta = {
   name: "astro/no-duplicate-nav-listeners",
@@ -83,15 +83,10 @@ export function check(file, source) {
   // Head scripts are excluded: identical head scripts are carried over without
   // re-running, and per-page head scripts are rare — body scripts are where
   // ClientRouter re-execution stacks handlers.
-  const headSpans = [];
-  {
-    const { frontmatterEnd } = splitFrontmatter(source);
-    const body = source.slice(frontmatterEnd);
-    for (const m of body.matchAll(/<head\b[^>]*>[\s\S]*?<\/head\s*>/gi)) {
-      headSpans.push([frontmatterEnd + (m.index ?? 0), frontmatterEnd + (m.index ?? 0) + m[0].length]);
-    }
-  }
-  const inHead = (off) => headSpans.some(([s, e]) => off >= s && off < e);
+  const { frontmatterEnd } = splitFrontmatter(source);
+  const span = headSpan(source.slice(frontmatterEnd));
+  const headRange = span ? [span[0] + frontmatterEnd, span[1] + frontmatterEnd] : null;
+  const inHead = (off) => headRange !== null && off >= headRange[0] && off < headRange[1];
   eachBodyScript(source, (block) => {
     if (inHead(block.tagStart)) return;
     const { attrs, js } = block;

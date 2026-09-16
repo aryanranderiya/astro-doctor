@@ -485,6 +485,57 @@ export function matchDirectives(tag) {
   return out;
 }
 
+// Quote-aware attribute value from a scanned (complete) tag. Handles
+// "...", '...', {…} (balanced), and bare tokens. Returns null when absent.
+export function tagAttr(tag, name) {
+  const m = new RegExp(`\\b${name}\\s*=\\s*`).exec(tag);
+  if (!m) return null;
+  let i = m.index + m[0].length;
+  while (i < tag.length && /\s/.test(tag[i])) i++;
+  const c = tag[i];
+  if (c === '"' || c === "'") {
+    const end = tag.indexOf(c, i + 1);
+    if (end === -1) return null;
+    return tag.slice(i + 1, end);
+  }
+  if (c === "{") {
+    let depth = 0;
+    let q = null;
+    for (let j = i; j < tag.length; j++) {
+      const d = tag[j];
+      if (q) {
+        if (d === "\\") j++;
+        else if (d === q) q = null;
+        continue;
+      }
+      if (d === '"' || d === "'" || d === "`") q = d;
+      else if (d === "{") depth++;
+      else if (d === "}") {
+        depth--;
+        if (depth === 0) return tag.slice(i + 1, j);
+      }
+    }
+    return null;
+  }
+  const end = tag.slice(i).search(/[\s>]/);
+  return end === -1 ? tag.slice(i) : tag.slice(i, i + end);
+}
+
+// Span of the first <head>…</head> in template source, or null. Located via
+// scanTags so attributes can't truncate the match; comments blanked first so
+// documented examples can't phantom-match.
+export function headSpan(source) {
+  const clean = source.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, " "));
+  const tags = scanTags(clean);
+  for (const t of tags) {
+    if (t.name.toLowerCase() !== "head") continue;
+    const cm = /<\/head\s*>/i.exec(source.slice(t.index + t.tag.length));
+    if (!cm) return null;
+    return [t.index, t.index + t.tag.length + cm.index + cm[0].length];
+  }
+  return null;
+}
+
 // Execution semantics (docs.astro.build, View Transitions + Scripts guides):
 // default bundled module <script> runs ONCE ever (deduped across swaps);
 // is:inline / data-astro-rerun scripts re-execute when the incoming page is

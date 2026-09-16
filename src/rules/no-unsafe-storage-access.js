@@ -1,4 +1,4 @@
-import { lineOf, snippetOf, splitFrontmatter, stripCodeNoise } from "../utils.js";
+import { lineOf, snippetOf, stripCodeNoise, eachBodyScript } from "../utils.js";
 
 export const meta = {
   name: "astro/no-unsafe-storage-access",
@@ -30,16 +30,10 @@ function tryRanges(code) {
 }
 
 export function check(file, source) {
-  const { frontmatterEnd } = splitFrontmatter(source);
-  const body = source.slice(frontmatterEnd);
-  // Self-closing <script … /> tags carry no body — blank them so the
-  // body matcher below cannot pair them with a later </script>.
-  const code = body.replace(/<script\b[^>]*\/\s*>/gi, (m) => " ".repeat(m.length));
   const diagnostics = [];
-  for (const m of code.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
-    const js = m[2] || "";
-    if (!/\b(localStorage|sessionStorage)\s*\.\s*(getItem|setItem|removeItem|clear)\b/.test(js)) continue;
-    const blockStart = frontmatterEnd + (m.index ?? 0) + m[0].indexOf(js);
+  eachBodyScript(source, ({ js, start: blockStart }) => {
+    if (diagnostics.length >= 6) return;
+    if (!/\b(localStorage|sessionStorage)\s*\.\s*(getItem|setItem|removeItem|clear)\b/.test(js)) return;
     const stripped = stripCodeNoise(js);
     const ranges = tryRanges(stripped);
     const inTry = (off) => ranges.some(([s, e]) => off >= s && off <= e);
@@ -55,8 +49,8 @@ export function check(file, source) {
         message: `${s[1]}.${s[2]}() outside try/catch — throws when storage is blocked and kills the enclosing script. Wrap with a safe helper (try/catch + default value).`,
         snippet: snippetOf(source, idx),
       });
-      if (diagnostics.length >= 6) return diagnostics;
+      if (diagnostics.length >= 6) break;
     }
-  }
+  });
   return diagnostics;
 }

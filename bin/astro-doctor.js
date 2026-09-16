@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { scanDir, RULES, topRules, byCategory } from "../src/engine.js";
 import { loadConfig } from "../src/config.js";
 
-const VERSION = "0.16.0";
+const VERSION = "0.17.0";
 const args = process.argv.slice(2);
 
 function help() {

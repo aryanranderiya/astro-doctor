@@ -1,5 +1,5 @@
 import path from "node:path";
-import { lineOf, snippetOf, splitFrontmatter, maskTemplate } from "../utils.js";
+import { lineOf, snippetOf, splitFrontmatter, maskTemplate, scanTags, tagAttr } from "../utils.js";
 
 export const meta = {
   name: "astro/no-missing-static-asset",
@@ -11,12 +11,6 @@ export const meta = {
 
 // Route prefixes that are pages/endpoints, never public/ files.
 const VIRTUAL_PREFIXES = ["/api/", "/_astro/", "/@fs/", "/@vite/", "/.netlify/", "/__/"];
-const ASSET_TAG_RES = [
-  /<(?:img|source|video|audio|track|embed)\b[^>]*?\b(?:src|poster)\s*=\s*(["'])(.*?)\1/gi,
-  /<script\b[^>]*?\bsrc\s*=\s*(["'])(.*?)\1/gi,
-  /<link\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1/gi,
-  /<meta\b[^>]*(?:property\s*=\s*["']og:image["']|name\s*=\s*["']twitter:image["'])[^>]*?\bcontent\s*=\s*(["'])(.*?)\1/gi,
-];
 
 function cleanRef(raw) {
   if (!raw || /^(https?:)?\/\/|^(data|blob|tel|mailto):/i.test(raw)) return null;
@@ -27,20 +21,59 @@ function cleanRef(raw) {
 }
 
 function* templateRefs(source, clean) {
-  for (const re of ASSET_TAG_RES) {
-    re.lastIndex = 0;
-    let m;
-    while ((m = re.exec(clean)) !== null) {
-      const ref = cleanRef(m[2]);
-      if (ref) yield { ref, index: m.index + m[0].indexOf(m[2]) };
+  for (const { name, tag, index } of scanTags(clean)) {
+    const lname = name.toLowerCase();
+    // value offset inside the tag (for exact line numbers on multiline tags)
+    const at = (attr) => {
+      const v = tagAttr(tag, attr);
+      if (typeof v !== "string") return null;
+      const ai = tag.search(new RegExp(`\\b${attr}\\s*=`));
+      const vi = ai === -1 ? -1 : tag.indexOf(v, ai);
+      return { raw: v, off: vi === -1 ? tag.indexOf(v) : vi };
+    };
+    if (["img", "source", "video", "audio", "track", "embed"].includes(lname)) {
+      for (const attr of ["src", "poster"]) {
+        const hit = at(attr);
+        if (!hit) continue;
+        const ref = cleanRef(hit.raw);
+        if (ref) yield { ref, index: index + hit.off };
+      }
+      continue;
+    }
+    if (lname === "script") {
+      const hit = at("src");
+      if (hit) {
+        const ref = cleanRef(hit.raw);
+        if (ref) yield { ref, index: index + hit.off };
+      }
+      continue;
+    }
+    if (lname === "link") {
+      const hit = at("href");
+      if (hit) {
+        const ref = cleanRef(hit.raw);
+        if (ref) yield { ref, index: index + hit.off };
+      }
+      continue;
+    }
+    if (lname === "meta") {
+      const key = at("property")?.raw ?? at("name")?.raw ?? "";
+      if (key === "og:image" || key === "twitter:image") {
+        const hit = at("content");
+        if (hit) {
+          const ref = cleanRef(hit.raw);
+          if (ref) yield { ref, index: index + hit.off };
+        }
+      }
+      continue;
     }
   }
-  // Image-ish props on ANY tag (island/component props like logoSrc,
-  // backgroundSrc, poster). Route hrefs on <a> are deliberately excluded.
+  // Image-ish props on ANY other tag (island/component props like logoSrc,
+  // backgroundSrc, poster). Route hrefs on <a> are deliberately excluded,
+  // as are the media tags handled above.
   const propRe = /\b\w*(?:src|Src|image|Image|icon|Icon|logo|Logo|cover|Cover|poster|Poster|thumb|Thumb)\w*\s*=\s*(["'])(\/[^"']+)\1/gi;
   let pm;
   while ((pm = propRe.exec(clean)) !== null) {
-    // Avoid double-reporting tags already covered above (img src, script src…).
     const ref = cleanRef(pm[3]);
     if (ref) yield { ref, index: pm.index + pm[0].indexOf(pm[3]) };
   }
