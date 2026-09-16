@@ -33,11 +33,14 @@ npm i -D github:aryanranderiya/astro-doctor
 
 ```bash
 astro-doctor [dir] [--json] [--verbose] [--quiet] [--config <file>]
+astro-doctor [dir] [--fast] [--cache]
 astro-doctor rules [--json]          # list all 42 rules
 astro-doctor ci install [--yes]      # add the GitHub Actions gate
 ```
 
 Exit code `1` when any `error` diagnostic fires — gate your CI on it.
+`--fast` runs per-file rules only (iteration, not gates); `--cache` persists
+per-file findings in `.astro-doctor-cache.json`.
 
 ### 3. Install for agents
 
