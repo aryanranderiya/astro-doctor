@@ -42,5 +42,38 @@
   "feedback": {
     "thumbsRating": true,
     "suggestEdit": true
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/aryanranderiya/astro-doctor"
+      },
+      {
+        "label": "npm",
+        "href": "https://www.npmjs.com/package/astro-doctor"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/aryanranderiya/astro-doctor"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/aryanranderiya/astro-doctor",
+      "website": "https://www.npmjs.com/package/astro-doctor"
+    }
+  },
+  "banner": {
+    "content": "v0.19.1 is live on npm \u2014 `npm i -D astro-doctor`",
+    "dismissible": true,
+    "type": "info"
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "search": {
+    "prompt": "Search rules, CLI, guides..."
   }
 }
