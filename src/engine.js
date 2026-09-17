@@ -74,7 +74,7 @@ export function gradeFor(score) {
   return "F";
 }
 
-export const TOOL_VERSION = "0.19.0";
+export const TOOL_VERSION = "0.19.1";
 export const CACHE_FILENAME = ".astro-doctor-cache.json";
 
 export function scanFiles(files, { config = {}, read = (f) => fs.readFileSync(f, "utf8"), corpus = new Map(), fast = false, cacheMap = null, stat = null } = {}) {

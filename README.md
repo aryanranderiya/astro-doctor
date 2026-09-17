@@ -1,6 +1,6 @@
 # astro-doctor
 
-[![version](https://img.shields.io/badge/version-0.19.0-black?style=flat&color=000000&colorB=000000)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.19.1-black?style=flat&color=000000&colorB=000000)](./CHANGELOG.md)
 [![tests](https://img.shields.io/badge/tests-65%20passing-black?style=flat&color=000000&colorB=000000)](./test/)
 [![rules](https://img.shields.io/badge/rules-42-black?style=flat&color=000000&colorB=000000)](./docs/RULES.md)
 [![node](https://img.shields.io/badge/node-%3E%3D18-black?style=flat&color=000000&colorB=000000)](./package.json)
@@ -34,7 +34,7 @@ npm i -D astro-doctor
 ```bash
 astro-doctor [dir] [--json] [--verbose] [--quiet] [--config <file>]
 astro-doctor [dir] [--fast] [--cache]
-astro-doctor rules [--json]          # list all 42 rules
+astro-doctor rules [--json]          # list all rules
 astro-doctor ci install [--yes]      # add the GitHub Actions gate
 ```
 

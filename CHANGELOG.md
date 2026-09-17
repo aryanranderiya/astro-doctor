@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1
+
+- Fix npm tarball omitting `skills/` and the example config referenced by the docs.
+
+
 ## 0.19.0
 
 - Document IR: compiler-backed structure (`src/parse.js`) with scanner
