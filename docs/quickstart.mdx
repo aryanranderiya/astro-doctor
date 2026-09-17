@@ -1,0 +1,44 @@
+---
+title: Quickstart
+description: Run your first astro-doctor audit in one command.
+---
+
+## Run the audit
+
+```bash
+npx astro-doctor@latest ./src
+```
+
+Or install it:
+
+```bash
+npm i -D astro-doctor
+```
+
+You'll get a health score, error/warning counts, and grouped findings:
+
+```text
+astro-doctor v0.19.0 — 57 .astro files, score 26/100 (F)
+  16 error(s), 41 warning(s) in ./src
+
+src/layouts/Layout.astro
+  ERROR [32] astro/no-missing-static-asset
+         Static asset '/og-image.jpg' does not exist under public/
+```
+
+## Fix in severity order
+
+1. Fix every `error` first — broken, insecure, or silently ignored code.
+2. Then `warning` — real cost (payload, CLS, leaks) unless you can cite why not.
+3. Re-run until the score stops moving.
+
+## Suppress explicitly
+
+No allowlists — suppress one line with a reason:
+
+```astro
+<!-- astro-doctor-ignore-next-line astro/no-unsafe-set-html -- trusted SVG sprite -->
+<span set:html={SOCIAL_SVGS[label]} />
+```
+
+`astro-doctor-ignore-line` (same line), bare `astro-doctor-ignore` (all rules on those lines), and file-wide `astro-doctor-ignore-file <rule>` (anywhere in the file) also work, in HTML, `{/* */}`, and `//` comments.

@@ -1,0 +1,25 @@
+---
+title: Introduction
+description: Deterministic static analysis for Astro — what astro-doctor is and why it exists.
+---
+
+# astro-doctor
+
+Your agent writes bad Astro. This catches it.
+
+astro-doctor deterministically scans an Astro codebase for issues across islands and hydration, data-fetching and prerendering, performance, security, correctness, and maintainability. No LLM, no network — every finding ships file, line, and a fix recipe.
+
+## Why deterministic?
+
+AI coding agents produce confident, plausible Astro that silently misuses `client:*` directives, leaks server-only code to the browser, or breaks under ClientRouter navigation. A linter with exact positions beats a model re-reading the code: it's faster, reproducible, and safe to gate CI on.
+
+## The pieces
+
+- **42 rules** across 6 categories — see the [rules reference](/rules)
+- **CLI** with human output, `--json` for machines, `--fast` and `--cache` for iteration
+- **Health score + top offenders** on every run; exit code 1 on any error
+- **`astro-doctor.config.mjs`** for severities and ignore globs
+- **Agent skill** for Claude Code, Cursor, Codex, and OpenCode
+- **`ci install`** generator for the GitHub Actions gate
+
+[Quickstart](/quickstart) runs your first audit in one command.

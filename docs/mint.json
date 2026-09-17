@@ -1,0 +1,29 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "astro-doctor",
+  "theme": "maple",
+  "colors": {
+    "primary": "#FFFFFF",
+    "light": "#A1A1AA",
+    "dark": "#0A0A0B"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": [
+    {
+      "group": "Start here",
+      "pages": ["introduction", "quickstart"]
+    },
+    {
+      "group": "Reference",
+      "pages": ["cli-reference", "rules", "configuration"]
+    },
+    {
+      "group": "Automation",
+      "pages": ["continuous-integration", "agents"]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/aryanranderiya/astro-doctor",
+    "npm": "https://www.npmjs.com/package/astro-doctor"
+  }
+}

@@ -1,0 +1,16 @@
+---
+title: Configuration
+description: Tune severities and ignore paths with astro-doctor.config.mjs.
+---
+
+Auto-discovered in the scan root (override with `--config`). Unknown rule names warn instead of silently doing nothing.
+
+```js
+export default {
+  rules: {
+    "astro/no-too-many-islands": "off", // 'error' | 'warn' | 'off'
+    "astro/no-draft-leak": "warn",
+  },
+  ignore: ["src/pages/f4llout/**", "src/**/*.draft.astro"],
+};
+```

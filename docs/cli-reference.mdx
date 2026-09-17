@@ -1,0 +1,27 @@
+---
+title: CLI reference
+description: Every astro-doctor command and flag.
+---
+
+## `astro-doctor [dir]`
+
+Scan a folder (default: current directory). Discovers `**/*.astro`, skipping `node_modules/dist/.astro/.git`.
+
+| Flag | Effect |
+| --- | --- |
+| `--json` | Machine-readable report (`ok`, `score`, `grade`, `filesScanned`, `errors`, `warnings`, `byCategory`, `byRule`, `diagnostics[]`) |
+| `--verbose` | Print rule count + config file used |
+| `--quiet` | Print only the score line |
+| `--config <file>` | Use a specific config instead of auto-discovery |
+| `--fast` | Per-file rules only (skips project-wide scans; for iteration, not gates) |
+| `--cache` | Persist per-file findings in `.astro-doctor-cache.json` |
+
+Exit code `1` when any `error` diagnostic fires.
+
+## `astro-doctor rules [--json]`
+
+List all rules with severity and description. `--json` emits the registry for tooling.
+
+## `astro-doctor ci install [--dir <project>] [--yes]`
+
+Write `.github/workflows/astro-doctor.yml`: full scan on PRs and pushes to `main`, failing on errors, uploading the JSON report as an artifact.

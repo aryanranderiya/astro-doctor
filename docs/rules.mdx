@@ -1,0 +1,151 @@
+---
+title: Rules reference
+description: All 42 astro-doctor rules by category.
+---
+
+# Rules reference
+
+Every rule is deterministic. Severities: `error` (broken/insecure/silently ignored — fix or prove wrong), `warning` (real cost — fix unless you can cite why not).
+
+## Accessibility
+
+### `astro/no-missing-color-scheme`
+*warning* — Dark-mode sites without a color-scheme declaration leave native controls (scrollbars, inputs, date pickers) in light mode and risk a white flash. Declare `<meta name="color-scheme">` or CSS `color-scheme`.
+
+### `astro/no-missing-html-lang`
+*error* — Full-document .astro files (<html>) must declare lang (screen readers, crawlers) and render a <title>. Components without <html> are skipped.
+
+## Correctness
+
+### `astro/no-broken-internal-links`
+*error* — Literal internal hrefs that match no page route, public file, or endpoint 404 in production. Dynamic [slug] routes cover their segment; everything else must exist.
+
+### `astro/no-client-directive-on-html`
+*error* — client:* directives only hydrate framework components (React/Vue/Svelte). They are silently ignored on native HTML elements.
+
+### `astro/no-client-on-astro-component`
+*error* — .astro components have no client runtime — client:* on them is a build error. Only framework components (.tsx/.jsx/.vue/.svelte) can hydrate.
+
+### `astro/no-client-only-without-fallback`
+*error* — client:only skips SSR entirely — without slot="fallback" crawlers and no-JS users get empty HTML. Prefer a hydrating directive or add a fallback.
+
+### `astro/no-document-in-frontmatter`
+*error* — Frontmatter (---) runs on the server at build/request time. document/window/localStorage throw or mismatch. Use a client <script> or island instead.
+
+### `astro/no-draft-leak`
+*warning* — Draft-convention collections (blog/posts/writings) queried without a draft filter ship unpublished content to prod pages/RSS/sitemap.
+
+### `astro/no-duplicate-nav-listeners`
+*warning* — is:inline scripts re-execute on every ClientRouter navigation (bundled module scripts run once ever). Registering astro:* listeners unconditionally in one stacks duplicate handlers per visit — guard the registration.
+
+### `astro/no-hooks-in-frontmatter`
+*error* — Framework hooks (useState/useEffect/use()…) run in a reactive client runtime. Frontmatter runs once on the server — hooks there are dead code. Move into a .tsx/.jsx island.
+
+### `astro/no-missing-reinit-on-nav`
+*warning* — Default bundled scripts run once ever. A plain script that CREATES DOM (widgets, injected scripts) without an astro:page-load hook leaves swapped-in pages uninitialized after ClientRouter navigation.
+
+### `astro/no-missing-static-asset`
+*error* — Absolute-path references to public/ assets (images, icons, manifests, scripts) 404 when the file doesn't exist — including social-image defaults baked into every page's <head>.
+
+### `astro/no-non-serializable-island-props`
+*error* — Island props cross the server→client boundary as JSON. Functions, render props and event handlers silently stop working. Pass data down, bubble events up via CustomEvent.
+
+### `astro/no-prerender-mismatch`
+*error* — export const prerender = false opts out of static generation — getStaticPaths() in the same file is then dead code (and vice versa: request-time APIs need the opt-out).
+
+### `astro/no-router-unaware-script`
+*error* — With ClientRouter, DOMContentLoaded fires only on the first load — scripts that bind on it silently stop working after client-side navigation. Bind on astro:page-load (or guard with document.readyState).
+
+### `astro/no-server-defer-misuse`
+*warning* — server:defer is mutually exclusive with client:* and renders a blank hole without slot="fallback". Pick one rendering model and always provide a skeleton.
+
+### `astro/no-unguarded-script-injection`
+*error* — is:inline scripts re-execute on every ClientRouter navigation. Injecting a third-party <script> with no idempotency guard appends duplicate widgets (and observers) per visit.
+
+### `astro/no-unhandled-promise`
+*warning* — A .then() chain with no .catch() (or rejection callback) fails silently — dynamic imports, view-transition promises, and fetches leave dead UI with no error surface.
+
+### `astro/no-unknown-collection`
+*error* — getCollection()/getEntry() with a name missing from content.config.ts collections silently returns nothing (or throws at build). Typos fail late — catch them here.
+
+### `astro/no-unsafe-storage-access`
+*warning* — localStorage/sessionStorage access throws (SecurityError) when storage is blocked — an unguarded read in a head script kills the whole block (theme stuck, no fallback). Wrap in try/catch with defaults.
+
+## Maintainability
+
+### `astro/no-complex-frontmatter`
+*warning* — Frontmatter with heavy branching (parsers, scorers, transformers) is untestable glue — extract it to src/lib/ with unit tests, leaving data-flow only.
+
+### `astro/no-dead-component`
+*warning* — An .astro/.tsx component that nothing imports is dead weight (or a forgotten migration — like a superseded comments widget). Delete it or exclude it in config `ignore`.
+
+### `astro/no-duplicate-markup`
+*warning* — Near-identical template blocks repeated across components (same player/figure/card wired twice with different defaults) should be one component — drift between copies is a matter of time.
+
+### `astro/no-huge-file`
+*warning* — Oversized files resist review and hide duplication — split components, extract lib helpers, or co-locate. Budgets: 400 lines (.astro), 800 (.tsx/.ts).
+
+### `astro/no-inline-event-handler`
+*warning* — on*="..." string handlers are eval-like, invisible to bundlers/CSP, and untestable. Bind in a client <script> or island instead (image fallbacks included).
+
+### `astro/no-untracked-todo`
+*warning* — TODO/FIXME without an issue link rots — convert to a tracked task or link it (TODO(#123), TODO: https://…). Prose and Markdown are excluded.
+
+## Performance
+
+### `astro/no-client-load-abuse`
+*warning* — client:load ships JS + framework runtime immediately and blocks the main thread. Default to client:visible/client:idle; reserve client:load for above-the-fold interactive chrome.
+
+### `astro/no-collection-refetch`
+*warning* — getStaticPaths() already loads the collection — a second top-level getCollection()/getEntry() outside it re-parses every entry per page at build. Compute once inside getStaticPaths and pass via props (prev/next/related included).
+
+### `astro/no-deep-island-props`
+*warning* — Island props serialize into the HTML payload and deserialize on hydrate. Whole-props spreads, deeply nested inline literals, and prop-count bloat all ship bytes and slow hydration — pass flat, minimal data.
+
+### `astro/no-fetch-waterfall`
+*warning* — Sequential top-level await fetch() in frontmatter pays full latency sums on every build/request. Use Promise.all for independent requests or bake datasets at build time.
+
+### `astro/no-island-in-map`
+*error* — An island inside .map() creates N astro-island loaders + N hydration roots. Lift the island above the list and pass rows as data.
+
+### `astro/no-large-island-props`
+*warning* — Island props are serialized into the HTML payload. Passing raw getCollection() results (with Markdown bodies) bloats every page — project to the fields the island renders, like mapProject().
+
+### `astro/no-sync-external-script`
+*warning* — Synchronous third-party <script src> in template blocks first render. Defer until idle/interaction, or load with async/defer.
+
+### `astro/no-too-many-islands`
+*warning* — Every client:* island ships its own loader + framework runtime. More than ~6 per page is a code smell — consolidate or replace static islands with <script> + custom elements.
+
+### `astro/no-unbounded-collection`
+*warning* — await getCollection() with no filter AND no bound (slice/limit/take) on a prerender=false (per-request) route re-scans and serializes the whole collection on every hit. Filter, bound, or precompute.
+
+### `astro/prefer-astro-image`
+*warning* — Raw <img> without dimensions/loading causes layout shift and misses Astro image optimization. Prefer astro:assets Image or add width/height/loading.
+
+## Security
+
+### `astro/no-client-env-leak`
+*error* — Only import.meta.env.PUBLIC_* (plus MODE/DEV/PROD/SSR/BASE_URL) is safe on the client. Secrets and astro:env/server imports in client <script> get bundled into shipped JS.
+
+### `astro/no-define-vars-xss`
+*error* — define:vars serializes values into a <script> via JSON.stringify with a case-sensitive </script> filter (CVE-2026-41067 class). Never pass request-derived data through it — use data-* attributes + textContent.
+
+### `astro/no-open-redirect`
+*error* — Astro.redirect() to a request-controlled URL is an open redirect (phishing). Only redirect to same-origin paths or an allowlist.
+
+### `astro/no-secret-in-define-vars`
+*error* — define:vars serializes values into client HTML. Passing secret/token/password-named values (other than PUBLIC_ env) ships credentials to the browser.
+
+### `astro/no-unsafe-navigate`
+*error* — navigate() performs no sanitization (docs: ?redirect=javascript:… executes). Only navigate to same-origin paths or an allowlist — never raw query input.
+
+### `astro/no-unsafe-set-html`
+*warning* — set:html renders raw HTML with no escaping. Flag anything that is not JSON-LD or visibly sanitized.
+
+## Deliberately not rules
+
+- `target="_blank"` without `rel` — browsers imply `noopener` since 2021
+- Remote `<Image>` without `remotePatterns` — needs config-file I/O
+- Collection schema checks, multi-framework pages, bare `client:visible` without `rootMargin`
+- Duplicate `id=` across files, untyped buttons outside forms, intervals in persisted subtrees
