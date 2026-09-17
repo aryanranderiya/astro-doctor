@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { scanDir, scanFiles, collectCorpusFiles, scoreFor, gradeFor, RULES, topRules, byCategory } from "../src/engine.js";
 import { loadConfig } from "../src/config.js";
 
-const VERSION = "0.20.0";
+const VERSION = "0.20.1";
 const args = process.argv.slice(2);
 
 function help() {
@@ -120,7 +120,20 @@ const asJson = args.includes("--json");
 const verbose = args.includes("--verbose");
 const quiet = args.includes("--quiet");
 const staged = args.includes("--staged");
-const target = path.resolve(args.find((a) => !a.startsWith("-") && a !== "rules") ?? process.cwd());
+// Positional scan dir: skip flags and the values of flags that take one
+// (--blocking error would otherwise be mistaken for a directory).
+const VALUE_FLAGS = new Set(["--config", "--blocking"]);
+const positionals = [];
+for (let i = 0; i < args.length; i++) {
+  const a = args[i];
+  if (VALUE_FLAGS.has(a)) {
+    i++;
+    continue;
+  }
+  if (a.startsWith("-") || a === "rules" || a === "ci") continue;
+  positionals.push(a);
+}
+const target = path.resolve(positionals[0] ?? process.cwd());
 
 // --blocking <level>: which severity fails the run (CI/hook gate).
 const BLOCKING = new Set(["error", "warning", "none"]);

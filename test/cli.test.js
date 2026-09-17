@@ -115,6 +115,14 @@ describe("cli", () => {
     assert.match(bad.stderr, /--blocking must be one of/);
   });
 
+  it("flag values are never mistaken for the scan directory", () => {
+    const site = tmpSite({ "src/w.astro": WARN_ONLY });
+    // No [dir] positional: cwd is the target, 'warning' is --blocking's value.
+    const r = run(["--json", "--blocking", "warning"], site);
+    assert.equal(r.code, 1);
+    assert.equal(JSON.parse(r.stdout).ok, false);
+  });
+
   it("--staged scans only staged files; exits 0 when none staged", () => {
     const empty = tmpRepo({ "src/a.astro": DIRTY }, []);
     const r0 = run(["--staged", "--json"], empty);

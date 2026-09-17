@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.1
+
+- Fix flag values (`--blocking error`) being mistaken for the scan
+  directory when no `[dir]` is given (broke `astro-doctor --staged
+  --blocking error`, the documented hook invocation).
+- Tests: 89 passing.
+
 ## 0.20.0
 
 - `--staged`: scan only staged `.astro` files (pre-commit hooks; exits 0
