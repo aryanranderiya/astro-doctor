@@ -3,8 +3,8 @@
   "name": "astro-doctor",
   "theme": "maple",
   "colors": {
-    "primary": "#FFFFFF",
-    "light": "#A1A1AA",
+    "primary": "#00BBFF",
+    "light": "#7DD7F5",
     "dark": "#0A0A0B"
   },
   "favicon": "/favicon.svg",
@@ -35,5 +35,24 @@
   "footerSocials": {
     "github": "https://github.com/aryanranderiya/astro-doctor",
     "npm": "https://www.npmjs.com/package/astro-doctor"
+  },
+  "description": "Deterministic static analysis for Astro \u2014 42 rules, zero LLM, zero network.",
+  "logo": {
+    "light": "/logo.svg",
+    "dark": "/logo.svg"
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/aryanranderiya/astro-doctor"
+    },
+    {
+      "name": "npm",
+      "url": "https://www.npmjs.com/package/astro-doctor"
+    }
+  ],
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true
   }
 }
