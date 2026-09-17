@@ -15,7 +15,7 @@ const root = process.argv.includes("--root")
 const errors = [];
 const fail = (msg) => errors.push(msg);
 
-const configPath = ["mint.json", "docs/mint.json", "docs.json"]
+const configPath = ["docs/docs.json", "docs.json", "docs/mint.json", "mint.json"]
   .map((p) => path.join(root, p))
   .find((p) => fs.existsSync(p));
 if (!configPath) fail("no mint.json/docs.json found (root or docs/)");
