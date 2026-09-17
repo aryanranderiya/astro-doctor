@@ -11,15 +11,25 @@
   "navigation": [
     {
       "group": "Start here",
-      "pages": ["introduction", "quickstart"]
+      "pages": [
+        "docs/introduction",
+        "docs/quickstart"
+      ]
     },
     {
       "group": "Reference",
-      "pages": ["cli-reference", "rules", "configuration"]
+      "pages": [
+        "docs/cli-reference",
+        "docs/rules",
+        "docs/configuration"
+      ]
     },
     {
       "group": "Automation",
-      "pages": ["continuous-integration", "agents"]
+      "pages": [
+        "docs/continuous-integration",
+        "docs/agents"
+      ]
     }
   ],
   "footerSocials": {
