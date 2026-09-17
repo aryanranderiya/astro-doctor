@@ -13,7 +13,7 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *warning* — Dark-mode sites without a color-scheme declaration leave native controls (scrollbars, inputs, date pickers) in light mode and risk a white flash. Declare `<meta name="color-scheme">` or CSS `color-scheme`.
 
 ### `astro/no-missing-html-lang`
-*error* — Full-document .astro files (<html>) must declare lang (screen readers, crawlers) and render a <title>. Components without <html> are skipped.
+*error* — Full-document .astro files (`<html`>) must declare lang (screen readers, crawlers) and render a <title>. Components without `<html`> are skipped.
 
 ## Correctness
 
@@ -30,7 +30,7 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *error* — client:only skips SSR entirely — without slot="fallback" crawlers and no-JS users get empty HTML. Prefer a hydrating directive or add a fallback.
 
 ### `astro/no-document-in-frontmatter`
-*error* — Frontmatter (---) runs on the server at build/request time. document/window/localStorage throw or mismatch. Use a client <script> or island instead.
+*error* — Frontmatter (---) runs on the server at build/request time. document/window/localStorage throw or mismatch. Use a client `<script`> or island instead.
 
 ### `astro/no-draft-leak`
 *warning* — Draft-convention collections (blog/posts/writings) queried without a draft filter ship unpublished content to prod pages/RSS/sitemap.
@@ -45,7 +45,7 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *warning* — Default bundled scripts run once ever. A plain script that CREATES DOM (widgets, injected scripts) without an astro:page-load hook leaves swapped-in pages uninitialized after ClientRouter navigation.
 
 ### `astro/no-missing-static-asset`
-*error* — Absolute-path references to public/ assets (images, icons, manifests, scripts) 404 when the file doesn't exist — including social-image defaults baked into every page's <head>.
+*error* — Absolute-path references to public/ assets (images, icons, manifests, scripts) 404 when the file doesn't exist — including social-image defaults baked into every page's `<head`>.
 
 ### `astro/no-non-serializable-island-props`
 *error* — Island props cross the server→client boundary as JSON. Functions, render props and event handlers silently stop working. Pass data down, bubble events up via CustomEvent.
@@ -60,7 +60,7 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *warning* — server:defer is mutually exclusive with client:* and renders a blank hole without slot="fallback". Pick one rendering model and always provide a skeleton.
 
 ### `astro/no-unguarded-script-injection`
-*error* — is:inline scripts re-execute on every ClientRouter navigation. Injecting a third-party <script> with no idempotency guard appends duplicate widgets (and observers) per visit.
+*error* — is:inline scripts re-execute on every ClientRouter navigation. Injecting a third-party `<script`> with no idempotency guard appends duplicate widgets (and observers) per visit.
 
 ### `astro/no-unhandled-promise`
 *warning* — A .then() chain with no .catch() (or rejection callback) fails silently — dynamic imports, view-transition promises, and fetches leave dead UI with no error surface.
@@ -86,7 +86,7 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *warning* — Oversized files resist review and hide duplication — split components, extract lib helpers, or co-locate. Budgets: 400 lines (.astro), 800 (.tsx/.ts).
 
 ### `astro/no-inline-event-handler`
-*warning* — on*="..." string handlers are eval-like, invisible to bundlers/CSP, and untestable. Bind in a client <script> or island instead (image fallbacks included).
+*warning* — on*="..." string handlers are eval-like, invisible to bundlers/CSP, and untestable. Bind in a client `<script`> or island instead (image fallbacks included).
 
 ### `astro/no-untracked-todo`
 *warning* — TODO/FIXME without an issue link rots — convert to a tracked task or link it (TODO(#123), TODO: https://…). Prose and Markdown are excluded.
@@ -112,24 +112,24 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *warning* — Island props are serialized into the HTML payload. Passing raw getCollection() results (with Markdown bodies) bloats every page — project to the fields the island renders, like mapProject().
 
 ### `astro/no-sync-external-script`
-*warning* — Synchronous third-party <script src> in template blocks first render. Defer until idle/interaction, or load with async/defer.
+*warning* — Synchronous third-party `<script` src> in template blocks first render. Defer until idle/interaction, or load with async/defer.
 
 ### `astro/no-too-many-islands`
-*warning* — Every client:* island ships its own loader + framework runtime. More than ~6 per page is a code smell — consolidate or replace static islands with <script> + custom elements.
+*warning* — Every client:* island ships its own loader + framework runtime. More than ~6 per page is a code smell — consolidate or replace static islands with `<script`> + custom elements.
 
 ### `astro/no-unbounded-collection`
 *warning* — await getCollection() with no filter AND no bound (slice/limit/take) on a prerender=false (per-request) route re-scans and serializes the whole collection on every hit. Filter, bound, or precompute.
 
 ### `astro/prefer-astro-image`
-*warning* — Raw <img> without dimensions/loading causes layout shift and misses Astro image optimization. Prefer astro:assets Image or add width/height/loading.
+*warning* — Raw `<img`> without dimensions/loading causes layout shift and misses Astro image optimization. Prefer astro:assets Image or add width/height/loading.
 
 ## Security
 
 ### `astro/no-client-env-leak`
-*error* — Only import.meta.env.PUBLIC_* (plus MODE/DEV/PROD/SSR/BASE_URL) is safe on the client. Secrets and astro:env/server imports in client <script> get bundled into shipped JS.
+*error* — Only import.meta.env.PUBLIC_* (plus MODE/DEV/PROD/SSR/BASE_URL) is safe on the client. Secrets and astro:env/server imports in client `<script`> get bundled into shipped JS.
 
 ### `astro/no-define-vars-xss`
-*error* — define:vars serializes values into a <script> via JSON.stringify with a case-sensitive </script> filter (CVE-2026-41067 class). Never pass request-derived data through it — use data-* attributes + textContent.
+*error* — define:vars serializes values into a `<script`> via JSON.stringify with a case-sensitive </script> filter (CVE-2026-41067 class). Never pass request-derived data through it — use data-* attributes + textContent.
 
 ### `astro/no-open-redirect`
 *error* — Astro.redirect() to a request-controlled URL is an open redirect (phishing). Only redirect to same-origin paths or an allowlist.

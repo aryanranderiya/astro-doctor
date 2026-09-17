@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "doctor": "node ./bin/astro-doctor.js",
-    "test": "node --test test/rules.test.js test/cli.test.js test/invariants.test.js test/properties.test.js test/parse.test.js",
+    "test": "node --test test/rules.test.js test/cli.test.js test/invariants.test.js test/properties.test.js test/parse.test.js test/docs.test.js",
     "scan:self": "node ./bin/astro-doctor.js .",
     "prepublishOnly": "npm test"
   },

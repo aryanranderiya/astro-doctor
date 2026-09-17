@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "name": "astro-doctor",
-  "theme": "maple",
+  "theme": "venus",
   "colors": {
     "primary": "#00BBFF",
     "light": "#7DD7F5",
@@ -12,30 +12,26 @@
     {
       "group": "Start here",
       "pages": [
-        "docs/introduction",
-        "docs/quickstart"
+        "introduction",
+        "quickstart"
       ]
     },
     {
       "group": "Reference",
       "pages": [
-        "docs/cli-reference",
-        "docs/rules",
-        "docs/configuration"
+        "cli-reference",
+        "rules",
+        "configuration"
       ]
     },
     {
       "group": "Automation",
       "pages": [
-        "docs/continuous-integration",
-        "docs/agents"
+        "continuous-integration",
+        "agents"
       ]
     }
   ],
-  "footerSocials": {
-    "github": "https://github.com/aryanranderiya/astro-doctor",
-    "npm": "https://www.npmjs.com/package/astro-doctor"
-  },
   "description": "Deterministic static analysis for Astro \u2014 42 rules, zero LLM, zero network.",
   "logo": {
     "light": "/logo.svg",
