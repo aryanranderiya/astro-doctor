@@ -26,7 +26,7 @@ npx github:aryanranderiya/astro-doctor ./src
 Or install it:
 
 ```bash
-npm i -D github:aryanranderiya/astro-doctor
+npm i -D astro-doctor
 ```
 
 ### 2. Run the audit
