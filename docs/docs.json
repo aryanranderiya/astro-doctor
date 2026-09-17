@@ -36,8 +36,8 @@
   },
   "description": "Deterministic static analysis for Astro \u2014 42 rules, zero LLM, zero network.",
   "logo": {
-    "light": "/logo.svg",
-    "dark": "/logo.svg"
+    "light": "/logo-light.svg",
+    "dark": "/logo-dark.svg"
   },
   "feedback": {
     "thumbsRating": true,
