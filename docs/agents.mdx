@@ -3,6 +3,20 @@ title: Coding agents
 description: Teach your agent to run astro-doctor and apply fixes.
 ---
 
-Copy `skills/astro-doctor/SKILL.md` from the repo into your agent's skills directory (Claude Code, Cursor, Codex, OpenCode). It covers when to run the doctor, how to read `--json`, severity policy, a fix recipe per rule, and the suppression doctrine (explicit reason, never bulk-suppress).
+<Steps>
+  <Step title="Install the skill">
+    Copy `skills/astro-doctor/SKILL.md` from the repo into your agent's skills directory (Claude Code, Cursor, Codex, OpenCode).
+  </Step>
+  <Step title="Run the loop">
+    After every Astro change: `astro-doctor --json` → fix `error` findings first → re-scan until clean. Severity policy, per-rule fix recipes, and the suppression doctrine (explicit reason, never bulk-suppress) are in the skill.
+  </Step>
+</Steps>
 
-Suggested loop: run `astro-doctor --json` after every Astro change, fix `error` findings first, re-scan until clean.
+<CardGroup cols={2}>
+  <Card title="Rules" icon="book-open" href="/rules">
+    What each finding means.
+  </Card>
+  <Card title="CLI reference" icon="square-terminal" href="/cli-reference">
+    Flags and JSON shape.
+  </Card>
+</CardGroup>

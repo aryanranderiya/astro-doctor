@@ -3,42 +3,37 @@ title: Quickstart
 description: Run your first astro-doctor audit in one command.
 ---
 
-## Run the audit
+## Run it
 
-```bash
-npx astro-doctor@latest ./src
-```
+<Steps>
+  <Step title="Scan">
+    ```bash
+    npx astro-doctor@latest ./src
+    ```
+    Or install it: `npm i -D astro-doctor`
+  </Step>
+  <Step title="Fix errors first">
+    `error` means broken, insecure, or silently ignored — fix or prove wrong.
+    Then `warning`: real cost, fix unless you can cite why not.
+  </Step>
+  <Step title="Re-scan to 100">
+    Score is asymptotic — watch it rise as you fix.
+  </Step>
+</Steps>
 
-Or install it:
-
-```bash
-npm i -D astro-doctor
-```
-
-You'll get a health score, error/warning counts, and grouped findings:
-
-```text
-astro-doctor v0.19.0 — 57 .astro files, score 26/100 (F)
-  16 error(s), 41 warning(s) in ./src
-
-src/layouts/Layout.astro
-  ERROR [32] astro/no-missing-static-asset
-         Static asset '/og-image.jpg' does not exist under public/
-```
-
-## Fix in severity order
-
-1. Fix every `error` first — broken, insecure, or silently ignored code.
-2. Then `warning` — real cost (payload, CLS, leaks) unless you can cite why not.
-3. Re-run until the score stops moving.
+<Note>
+  Exit code `1` means error findings exist. Gate CI on it.
+  `--json` gives machines `{ ok, score, diagnostics[] }`.
+</Note>
 
 ## Suppress explicitly
 
-No allowlists — suppress one line with a reason:
+No allowlists — one line, with a reason:
 
 ```astro
 <!-- astro-doctor-ignore-next-line astro/no-unsafe-set-html -- trusted SVG sprite -->
 <span set:html={SOCIAL_SVGS[label]} />
 ```
 
-`astro-doctor-ignore-line` (same line), bare `astro-doctor-ignore` (all rules on those lines), and file-wide `astro-doctor-ignore-file <rule>` (anywhere in the file) also work, in HTML, `{/* */}`, and `//` comments.
+Also available: `astro-doctor-ignore-line` (same line), bare `astro-doctor-ignore`
+(all rules on those lines), and file-wide `astro-doctor-ignore-file <rule>`.

@@ -3,10 +3,18 @@ title: Continuous integration
 description: Gate pull requests on astro-doctor errors.
 ---
 
-```bash
-astro-doctor ci install
-```
+<Steps>
+  <Step title="Install the workflow">
+    ```bash
+    astro-doctor ci install
+    ```
+    Writes `.github/workflows/astro-doctor.yml`.
+  </Step>
+  <Step title="Push a PR">
+    Full scan runs on PRs and pushes to `main`. Any `error` diagnostic fails the check; the JSON report uploads as an artifact.
+  </Step>
+</Steps>
 
-This writes `.github/workflows/astro-doctor.yml`: full scan on PRs and pushes to `main`, failing the check when any `error` diagnostic fires, uploading the JSON report as an artifact. Point the install step at your fork if you maintain one.
-
-> Note: if your GitHub Actions are billing-locked, the workflow can't run — but every gate below stays valid locally: `astro-doctor --json` exits 1 on errors, and `astro check`, `biome check`, and `astro build` cover types, style, and compilation.
+<Note>
+  No CI available? Every gate below stays valid locally: `astro-doctor --json` exits 1 on errors, and `astro check`, `biome check`, and `astro build` cover types, style, and compilation.
+</Note>

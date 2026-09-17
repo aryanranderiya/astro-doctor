@@ -7,19 +7,26 @@ description: Deterministic static analysis for Astro — what astro-doctor is an
 
 Your agent writes bad Astro. This catches it.
 
-astro-doctor deterministically scans an Astro codebase for issues across islands and hydration, data-fetching and prerendering, performance, security, correctness, and maintainability. No LLM, no network — every finding ships file, line, and a fix recipe.
+Deterministic static analysis for Astro: 42 rules, zero LLM, zero network. Every finding ships file, line, and a fix recipe.
 
-## Why deterministic?
+```mermaid
+flowchart LR
+    A[astro-doctor scan] --> B{errors?}
+    B -->|yes| C[Fix with recipe]
+    B -->|no| D[Ship it]
+    C --> A
+```
 
-AI coding agents produce confident, plausible Astro that silently misuses `client:*` directives, leaks server-only code to the browser, or breaks under ClientRouter navigation. A linter with exact positions beats a model re-reading the code: it's faster, reproducible, and safe to gate CI on.
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    First audit in one command.
+  </Card>
+  <Card title="Rules" icon="book-open" href="/rules">
+    All 42 rules by category.
+  </Card>
+  <Card title="Agents" icon="sparkles" href="/agents">
+    Teach your agent the loop.
+  </Card>
+</CardGroup>
 
-## The pieces
-
-- **42 rules** across 6 categories — see the [rules reference](/rules)
-- **CLI** with human output, `--json` for machines, `--fast` and `--cache` for iteration
-- **Health score + top offenders** on every run; exit code 1 on any error
-- **`astro-doctor.config.mjs`** for severities and ignore globs
-- **Agent skill** for Claude Code, Cursor, Codex, and OpenCode
-- **`ci install`** generator for the GitHub Actions gate
-
-[Quickstart](/quickstart) runs your first audit in one command.
+<GitHub.Repo repo="aryanranderiya/astro-doctor" />

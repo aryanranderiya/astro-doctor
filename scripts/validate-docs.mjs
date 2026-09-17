@@ -27,8 +27,12 @@ if (typeof config.theme !== "string" || config.theme.length === 0) {
 }for (const [k, v] of Object.entries(config.colors ?? {})) {
   if (!/^#[0-9a-fA-F]{6}$/.test(v)) fail(`colors.${k} must be #rrggbb, got ${JSON.stringify(v)}`);
 }
+const nav = config.navigation ?? [];
+const groups = Array.isArray(nav)
+  ? nav
+  : [...(nav.groups ?? []), ...(nav.tabs ?? []).flatMap((t) => t.groups ?? [])];
 const pageFiles = [];
-for (const group of config.navigation ?? []) {
+for (const group of groups) {
   for (const page of group.pages ?? []) {
     pageFiles.push(page);
     const file = path.join(root, "docs", `${page}.mdx`);
@@ -55,7 +59,9 @@ for (const page of pageFiles) {
   const src = fs.readFileSync(file, "utf8");
   if (!src.startsWith("---")) fail(`${page}.mdx: missing frontmatter`);
   const body = src.replace(/^---[\s\S]*?---/, "");
-  const stripped = body.replace(/`[^`]*`/g, (m) => " ".repeat(m.length));
+  const stripped = body
+    .replace(/\\</g, "  ") // escaped \< is literal text, not a tag
+    .replace(/`[^`]*`/g, (m) => " ".repeat(m.length));
   for (const m of stripped.matchAll(/<(meta|script|style|iframe|object|embed)\b/gi)) {
     fail(`${page}.mdx: raw <${m[1]}> tag will break the MDX build (escape in code spans)`);
   }
