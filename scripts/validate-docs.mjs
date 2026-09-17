@@ -22,12 +22,9 @@ if (!configPath) fail("no mint.json/docs.json found (root or docs/)");
 const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 const contentDir = path.dirname(configPath);
 
-if (!["venus", "quill", "prism"].includes(config.theme)) {
-  // NB: allowed values come from Mintlify's deploy log, not docs — if this
-  // ever fires on a theme Mintlify added, delete this check, not the theme.
-  fail(`theme must be venus|quill|prism, got ${JSON.stringify(config.theme)}`);
-}
-for (const [k, v] of Object.entries(config.colors ?? {})) {
+if (typeof config.theme !== "string" || config.theme.length === 0) {
+  fail("theme must be a non-empty string (allowed values come from the deploy log, not this file)");
+}for (const [k, v] of Object.entries(config.colors ?? {})) {
   if (!/^#[0-9a-fA-F]{6}$/.test(v)) fail(`colors.${k} must be #rrggbb, got ${JSON.stringify(v)}`);
 }
 const pageFiles = [];
