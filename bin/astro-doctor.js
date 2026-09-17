@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import path from "node:path";
 import fs from "node:fs";
-import { scanDir, RULES, topRules, byCategory } from "../src/engine.js";
+import { execFileSync } from "node:child_process";
+import { scanDir, scanFiles, collectCorpusFiles, scoreFor, gradeFor, RULES, topRules, byCategory } from "../src/engine.js";
 import { loadConfig } from "../src/config.js";
 
-const VERSION = "0.19.1";
+const VERSION = "0.20.0";
 const args = process.argv.slice(2);
 
 function help() {
@@ -13,7 +14,7 @@ function help() {
     ``,
     `Usage:`,
     `  astro-doctor [dir] [--json] [--verbose] [--quiet] [--config <file>]`,
-    `  astro-doctor [dir] [--fast] [--cache]`,
+    `  astro-doctor [dir] [--fast] [--cache] [--staged] [--blocking <level>]`,
     `  astro-doctor rules [--json]`,
     `  astro-doctor ci install [--dir <project>] [--yes]`,
     ``,
@@ -24,6 +25,8 @@ function help() {
     `  --config    path to astro-doctor.config.mjs (default: auto-discover)`,
     `  --fast      per-file rules only (skip project-wide reference scans)`,
     `  --cache     persist per-file findings in .astro-doctor-cache.json`,
+    `  --staged    scan only staged .astro files (pre-commit hook; exits 0 when none)`,
+    `  --blocking  severity that fails: error (default), warning, or none (advisory)`,
     `  rules       list all rules with severity + description`,
     ``,
     `Suppression (no allowlists — be explicit):`,
@@ -33,7 +36,7 @@ function help() {
     `Config file (astro-doctor.config.mjs):`,
     `  export default { rules: { "astro/no-too-many-islands": "off" }, ignore: ["src/pages/f4llout/**"] };`,
     ``,
-    `Exit code 1 if any error-severity diagnostic is found.`,
+    `Exit code 1 when the --blocking gate fails (default: any error; 'warning' fails on warnings; 'none' never fails).`,
   ];
   console.log(lines.join("\n"));
 }
@@ -116,7 +119,68 @@ jobs:
 const asJson = args.includes("--json");
 const verbose = args.includes("--verbose");
 const quiet = args.includes("--quiet");
+const staged = args.includes("--staged");
 const target = path.resolve(args.find((a) => !a.startsWith("-") && a !== "rules") ?? process.cwd());
+
+// --blocking <level>: which severity fails the run (CI/hook gate).
+const BLOCKING = new Set(["error", "warning", "none"]);
+let blocking = "error";
+const blockIdx = args.indexOf("--blocking");
+if (blockIdx !== -1) {
+  blocking = args[blockIdx + 1] ?? "";
+  if (!BLOCKING.has(blocking)) {
+    console.error(`astro-doctor: --blocking must be one of error|warning|none (got '${args[blockIdx + 1] ?? ""}').`);
+    process.exit(2);
+  }
+}
+
+// --staged: scan only staged .astro files (pre-commit hook). Cross-file
+// rules still see the full project corpus for context, but only findings
+// in staged files are reported.
+function stagedAstroFiles(cwd) {
+  let toplevel;
+  try {
+    toplevel = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    console.error("astro-doctor: --staged needs a git repository.");
+    process.exit(2);
+  }
+  let raw = "";
+  try {
+    raw = execFileSync("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"], {
+      cwd: toplevel,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (err) {
+    console.error(`astro-doctor: git diff --cached failed: ${err?.message ?? err}`);
+    process.exit(2);
+  }
+  const files = raw
+    .split("\0")
+    .filter(Boolean)
+    .map((f) => path.resolve(toplevel, f))
+    .filter((f) => f.endsWith(".astro"));
+  const existing = files.filter((f) => {
+    try {
+      return fs.statSync(f).isFile();
+    } catch {
+      return false; // staged deletion — nothing to scan
+    }
+  });
+  return { toplevel, files: [...new Set(existing)].sort() };
+}
+
+let configRoot = target;
+let stagedInfo = null;
+if (staged) {
+  stagedInfo = stagedAstroFiles(target);
+  configRoot = stagedInfo.toplevel;
+}
 
 let config = {};
 let configFile = null;
@@ -131,7 +195,7 @@ if (cfgIdx !== -1 && args[cfgIdx + 1]) {
     process.exit(2);
   }
 } else {
-  config = await loadConfig(target);
+  config = await loadConfig(configRoot);
   configFile = config.__file ?? null;
 }
 
@@ -149,22 +213,65 @@ if (cfgIdx !== -1 && args[cfgIdx + 1]) {
   }
 }
 
-const { filesScanned, diagnostics, score, grade } = scanDir(target, {
-  config,
-  fast: args.includes("--fast"),
-  cache: args.includes("--cache"),
-});
+let filesScanned;
+let diagnostics;
+let score;
+let grade;
+let scanTarget = target;
+if (stagedInfo) {
+  scanTarget = stagedInfo.toplevel;
+  if (stagedInfo.files.length === 0) {
+    filesScanned = 0;
+    diagnostics = [];
+    score = 100;
+    grade = "A";
+  } else {
+    // Full corpus for cross-file context; report staged files only.
+    const stagedSet = new Set(stagedInfo.files);
+    const fullConfig = { ...config, __root: stagedInfo.toplevel };
+    const corpus = new Map();
+    if (!args.includes("--fast") && RULES.some((r) => typeof r.checkAll === "function")) {
+      for (const f of collectCorpusFiles(stagedInfo.toplevel)) {
+        if (corpus.has(f)) continue;
+        try {
+          corpus.set(f, fs.readFileSync(f, "utf8"));
+        } catch {
+          corpus.set(f, "");
+        }
+      }
+    }
+    const result = scanFiles(stagedInfo.files, {
+      config: fullConfig,
+      fast: args.includes("--fast"),
+      corpus,
+    });
+    filesScanned = result.filesScanned;
+    diagnostics = result.diagnostics.filter((d) => stagedSet.has(d.file));
+    score = scoreFor(diagnostics);
+    grade = gradeFor(score);
+  }
+} else {
+  ({ filesScanned, diagnostics, score, grade } = scanDir(target, {
+    config,
+    fast: args.includes("--fast"),
+    cache: args.includes("--cache"),
+  }));
+}
 const errors = diagnostics.filter((d) => d.severity === "error").length;
 const warnings = diagnostics.length - errors;
+const failed =
+  blocking === "none" ? false : blocking === "warning" ? diagnostics.length > 0 : errors > 0;
 
 if (asJson) {
   console.log(
     JSON.stringify(
       {
-        ok: errors === 0,
+        ok: !failed,
         tool: "astro-doctor",
         version: VERSION,
-        target,
+        target: scanTarget,
+        staged,
+        blocking,
         score,
         grade,
         filesScanned,
@@ -188,8 +295,13 @@ if (asJson) {
     )
   );
 } else {
-  console.log(`astro-doctor v${VERSION} — ${filesScanned} .astro files, score ${score}/100 (${grade})`);
-  console.log(`  ${errors} error(s), ${warnings} warning(s) in ${target}`);
+  if (staged) {
+    console.log(`astro-doctor v${VERSION} — ${filesScanned} staged .astro files, score ${score}/100 (${grade})`);
+    console.log(`  ${errors} error(s), ${warnings} warning(s) in ${scanTarget}`);
+  } else {
+    console.log(`astro-doctor v${VERSION} — ${filesScanned} .astro files, score ${score}/100 (${grade})`);
+    console.log(`  ${errors} error(s), ${warnings} warning(s) in ${target}`);
+  }
   if (verbose) {
     console.log(`  rules: ${RULES.length}, config: ${configFile ?? "(none)"}`);
   }
@@ -203,7 +315,7 @@ if (asJson) {
     for (const d of diagnostics) {
       if (d.file !== lastFile) {
         lastFile = d.file;
-        console.log(`${path.relative(target, d.file) || d.file}`);
+        console.log(`${path.relative(scanTarget, d.file) || d.file}`);
       }
       console.log(`  ${d.severity === "error" ? "ERROR" : "WARN "} [${d.line}] ${d.rule}`);
       console.log(`         ${d.message}`);
@@ -219,4 +331,4 @@ if (asJson) {
 
 // NOTE: exitCode (not process.exit) — process.exit() can truncate piped
 // stdout, corrupting --json output.
-process.exitCode = errors > 0 ? 1 : 0;
+process.exitCode = failed ? 1 : 0;

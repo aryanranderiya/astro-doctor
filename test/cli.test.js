@@ -15,10 +15,14 @@ function run(args, cwd) {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
-    return { code: 0, stdout };
+    return { code: 0, stdout, stderr: "" };
   } catch (err) {
     return { code: err.status ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
   }
+}
+
+function git(args, cwd) {
+  execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
 }
 
 function tmpSite(files) {
@@ -30,6 +34,19 @@ function tmpSite(files) {
   }
   return dir;
 }
+
+function tmpRepo(files, stage) {
+  const dir = tmpSite(files);
+  git(["init", "-q"], dir);
+  git(["config", "user.email", "test@test.t"], dir);
+  git(["config", "user.name", "test"], dir);
+  for (const f of stage) git(["add", f], dir);
+  return dir;
+}
+
+const CLEAN = `---\nconst x = 1;\n---\n<div>{x}</div>\n`;
+const DIRTY = `---\n---\n<div client:load>x</div>\n`;
+const WARN_ONLY = `---\nconst x = 1;\n---\n<button onclick="doIt()">hi</button>\n`;
 
 describe("cli", () => {
   it("--help and --version exit 0", () => {
@@ -80,5 +97,48 @@ describe("cli", () => {
     const rules = JSON.parse(r.stdout);
     assert.ok(rules.length >= 30);
     assert.ok(rules.every((x) => x.name.startsWith("astro/")));
+  });
+
+  it("--blocking gates the exit code (error default, warning, none)", () => {
+    const site = tmpSite({ "src/w.astro": WARN_ONLY });
+    const def = run([site, "--json"]);
+    assert.equal(def.code, 0); // warnings don't fail the default gate
+    assert.equal(JSON.parse(def.stdout).ok, true);
+    const warn = run([site, "--json", "--blocking", "warning"]);
+    assert.equal(warn.code, 1);
+    assert.equal(JSON.parse(warn.stdout).ok, false);
+    const none = run([site, "--json", "--blocking", "none"]);
+    assert.equal(none.code, 0);
+    assert.equal(JSON.parse(none.stdout).ok, true);
+    const bad = run([site, "--blocking", "bogus"]);
+    assert.equal(bad.code, 2);
+    assert.match(bad.stderr, /--blocking must be one of/);
+  });
+
+  it("--staged scans only staged files; exits 0 when none staged", () => {
+    const empty = tmpRepo({ "src/a.astro": DIRTY }, []);
+    const r0 = run(["--staged", "--json"], empty);
+    assert.equal(r0.code, 0);
+    assert.equal(JSON.parse(r0.stdout).filesScanned, 0);
+
+    const repo = tmpRepo({ "src/clean.astro": CLEAN, "src/dirty.astro": DIRTY }, ["src/dirty.astro"]);
+    const r1 = run(["--staged", "--json"], repo);
+    assert.equal(r1.code, 1);
+    const j1 = JSON.parse(r1.stdout);
+    assert.equal(j1.filesScanned, 1);
+    assert.ok(j1.diagnostics.length > 0);
+    assert.ok(j1.diagnostics.every((d) => d.file.endsWith("dirty.astro")));
+
+    const repoClean = tmpRepo({ "src/clean.astro": CLEAN, "src/dirty.astro": DIRTY }, ["src/clean.astro"]);
+    const r2 = run(["--staged", "--json"], repoClean);
+    assert.equal(r2.code, 0);
+    assert.equal(JSON.parse(r2.stdout).ok, true);
+  });
+
+  it("--staged outside a git repo exits 2", () => {
+    const site = tmpSite({ "src/a.astro": CLEAN });
+    const r = run(["--staged", "--json"], site);
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /needs a git repository/);
   });
 });

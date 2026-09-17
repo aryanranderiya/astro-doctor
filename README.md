@@ -1,8 +1,8 @@
 # astro-doctor
 
 [![npm](https://img.shields.io/npm/v/astro-doctor?style=flat&color=000000&colorB=000000)](https://www.npmjs.com/package/astro-doctor)
-[![version](https://img.shields.io/badge/version-0.19.1-black?style=flat&color=000000&colorB=000000)](./CHANGELOG.md)
-[![tests](https://img.shields.io/badge/tests-85%20passing-black?style=flat&color=000000&colorB=000000)](./test/)
+[![version](https://img.shields.io/badge/version-0.20.0-black?style=flat&color=000000&colorB=000000)](./CHANGELOG.md)
+[![tests](https://img.shields.io/badge/tests-88%20passing-black?style=flat&color=000000&colorB=000000)](./test/)
 [![rules](https://img.shields.io/badge/rules-42-black?style=flat&color=000000&colorB=000000)](./docs/RULES.md)
 [![node](https://img.shields.io/badge/node-%3E%3D18-black?style=flat&color=000000&colorB=000000)](./package.json)
 [![license](https://img.shields.io/badge/license-MIT-black?style=flat&color=000000&colorB=000000)](./LICENSE)
@@ -34,14 +34,17 @@ npm i -D astro-doctor
 
 ```bash
 astro-doctor [dir] [--json] [--verbose] [--quiet] [--config <file>]
-astro-doctor [dir] [--fast] [--cache]
+astro-doctor [dir] [--fast] [--cache] [--staged] [--blocking <level>]
 astro-doctor rules [--json]          # list all rules
 astro-doctor ci install [--yes]      # add the GitHub Actions gate
 ```
 
-Exit code `1` when any `error` diagnostic fires — gate your CI on it.
+Exit code `1` when the `--blocking` gate fails (default: any `error`;
+`warning` fails on warnings too, `none` never fails) — gate your CI on it.
 `--fast` runs per-file rules only (iteration, not gates); `--cache` persists
 per-file findings in `.astro-doctor-cache.json`.
+`--staged` scans only staged `.astro` files — wire it into `lefthook.yml`
+pre-commit (see `docs/cli-reference.mdx` for the copy-paste hook).
 
 ### 3. Install for agents
 

@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.19.1
+## 0.20.0
+
+- `--staged`: scan only staged `.astro` files (pre-commit hooks; exits 0
+  when none staged). Full project corpus kept for cross-file context, only
+  staged findings reported.
+- `--blocking error|warning|none`: which severity fails the run (default:
+  `error`). `--json` `ok` follows the gate.
+- Tests: 88 passing.
 
 - Fix npm tarball omitting `skills/` and the example config referenced by the docs.
 

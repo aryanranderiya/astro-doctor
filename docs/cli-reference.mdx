@@ -15,11 +15,32 @@ Scans a folder (default: current directory). Discovers `**/*.astro`, skipping `n
 | `--config <file>` | Config instead of auto-discovery |
 | `--fast` | Per-file rules only (iteration, not gates) |
 | `--cache` | Persist per-file findings in `.astro-doctor-cache.json` |
+| `--staged` | Scan only staged `.astro` files (pre-commit; exits 0 when none staged) |
+| `--blocking <level>` | Severity that fails: `error` (default), `warning`, or `none` (advisory) |
+
+## Pre-commit hook (copy-paste)
+
+Needs [`lefthook`](https://github.com/evilmartians/lefthook). Mirrors the report-and-continue pattern — findings print, commits never block:
+
+```yaml
+# lefthook.yml
+pre-commit:
+  commands:
+    astro-doctor:
+      run: astro_doctor_output=$(mktemp "${TMPDIR:-/tmp}/astro-doctor-hook.XXXXXX"); if bunx astro-doctor --staged --blocking error > "$astro_doctor_output" 2>&1; then rm -f "$astro_doctor_output"; else cat "$astro_doctor_output" >&2; rm -f "$astro_doctor_output"; printf "%s\n" "astro-doctor found staged regressions." "Run astro-doctor --staged --blocking error to inspect." >&2; fi
+```
+
+Want the hook to block instead? Append `&& exit 1` inside the `else` branch, or gate on warnings with `--blocking warning`.
+
+<Note>
+  `--staged` needs a git repository. Cross-file rules still see the whole
+  project for context, but only findings in staged files are reported.
+</Note>
 
 ## `--json` shape
 
 <ResponseField name="ok" type="boolean" required>
-  False when any `error` diagnostic exists.
+  False when the `--blocking` gate fails (default: any `error` diagnostic exists).
 </ResponseField>
 
 <ResponseField name="score" type="number" required>

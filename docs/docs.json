@@ -66,7 +66,7 @@
     }
   },
   "banner": {
-    "content": "v0.19.1 is live on npm \u2014 `npm i -D astro-doctor`",
+    "content": "Deterministic Astro linting \u2014 `npm i -D astro-doctor`",
     "dismissible": true,
     "type": "info"
   },
