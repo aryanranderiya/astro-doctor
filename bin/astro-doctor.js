@@ -95,7 +95,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm i -g github:aryanranderiya/astro-doctor
+      - run: npm i -g astro-doctor@latest
       - name: Scan (gate on errors)
         run: astro-doctor --json > astro-doctor.json
       - name: Upload report

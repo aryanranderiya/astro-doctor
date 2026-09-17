@@ -1,7 +1,8 @@
 # astro-doctor
 
+[![npm](https://img.shields.io/npm/v/astro-doctor?style=flat&color=000000&colorB=000000)](https://www.npmjs.com/package/astro-doctor)
 [![version](https://img.shields.io/badge/version-0.19.1-black?style=flat&color=000000&colorB=000000)](./CHANGELOG.md)
-[![tests](https://img.shields.io/badge/tests-65%20passing-black?style=flat&color=000000&colorB=000000)](./test/)
+[![tests](https://img.shields.io/badge/tests-85%20passing-black?style=flat&color=000000&colorB=000000)](./test/)
 [![rules](https://img.shields.io/badge/rules-42-black?style=flat&color=000000&colorB=000000)](./docs/RULES.md)
 [![node](https://img.shields.io/badge/node-%3E%3D18-black?style=flat&color=000000&colorB=000000)](./package.json)
 [![license](https://img.shields.io/badge/license-MIT-black?style=flat&color=000000&colorB=000000)](./LICENSE)
@@ -20,7 +21,7 @@ file, line, and fix recipe for every finding.
 Run this at your project root to get an audit:
 
 ```bash
-npx github:aryanranderiya/astro-doctor ./src
+npx astro-doctor@latest ./src
 ```
 
 Or install it:
