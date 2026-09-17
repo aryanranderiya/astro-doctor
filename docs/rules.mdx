@@ -13,7 +13,7 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *warning* — Dark-mode sites without a color-scheme declaration leave native controls (scrollbars, inputs, date pickers) in light mode and risk a white flash. Declare `<meta name="color-scheme">` or CSS `color-scheme`.
 
 ### `astro/no-missing-html-lang`
-*error* — Full-document .astro files (`<html`>) must declare lang (screen readers, crawlers) and render a <title>. Components without `<html`> are skipped.
+*error* — Full-document .astro files (`<html`>) must declare lang (screen readers, crawlers) and render a `<title`>. Components without `<html`> are skipped.
 
 ## Correctness
 
@@ -129,7 +129,7 @@ Every rule is deterministic. Severities: `error` (broken/insecure/silently ignor
 *error* — Only import.meta.env.PUBLIC_* (plus MODE/DEV/PROD/SSR/BASE_URL) is safe on the client. Secrets and astro:env/server imports in client `<script`> get bundled into shipped JS.
 
 ### `astro/no-define-vars-xss`
-*error* — define:vars serializes values into a `<script`> via JSON.stringify with a case-sensitive </script> filter (CVE-2026-41067 class). Never pass request-derived data through it — use data-* attributes + textContent.
+*error* — define:vars serializes values into a `<script`> via JSON.stringify with a case-sensitive `</script>` filter (CVE-2026-41067 class). Never pass request-derived data through it — use data-* attributes + textContent.
 
 ### `astro/no-open-redirect`
 *error* — Astro.redirect() to a request-controlled URL is an open redirect (phishing). Only redirect to same-origin paths or an allowlist.
